@@ -1,0 +1,212 @@
+package com.dev.trackone.feature.expense.presentation
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.dev.trackone.feature.expense.domain.model.ExpenseCategory
+import com.dev.trackone.feature.expense.domain.model.ExpenseItem
+import com.dev.trackone.feature.expense.domain.repository.ExpenseRepository
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+import javax.inject.Inject
+
+@HiltViewModel
+class ExpenseViewModel @Inject constructor(
+    private val repository: ExpenseRepository,
+) : ViewModel() {
+
+    private val _uiState = MutableStateFlow(ExpenseUiState())
+    val uiState: StateFlow<ExpenseUiState> = _uiState.asStateFlow()
+
+    private val _formState = MutableStateFlow(ExpenseFormState())
+    val formState: StateFlow<ExpenseFormState> = _formState.asStateFlow()
+
+    init {
+        loadData()
+    }
+
+    private fun loadData() {
+        viewModelScope.launch {
+            combine(
+                repository.getAll(),
+                repository.getByType(isIncome = true),
+                repository.getByType(isIncome = false),
+            ) { all, income, expense ->
+                val totalInc = income.sumOf { it.amount }
+                val totalExp = expense.sumOf { it.amount }
+                
+                _uiState.update { state ->
+                    state.copy(
+                        isLoading = false,
+                        items = all,
+                        incomeItems = income,
+                        expenseItems = expense,
+                        totalIncome = totalInc,
+                        totalExpense = totalExp,
+                        balance = totalInc - totalExp,
+                        error = null,
+                    )
+                }
+            }
+                .catch { e ->
+                    _uiState.update {
+                        it.copy(isLoading = false, error = e.message ?: "Unknown error")
+                    }
+                }
+                .collect {}
+        }
+    }
+
+    // ========== Search ==========
+
+    fun onSearchQueryChange(query: String) {
+        _uiState.update { it.copy(searchQuery = query) }
+        if (query.isBlank()) {
+            loadData()
+        } else {
+            viewModelScope.launch {
+                repository.search(query)
+                    .catch { }
+                    .collect { results ->
+                        _uiState.update { it.copy(items = results) }
+                    }
+            }
+        }
+    }
+
+    fun toggleSearch() {
+        _uiState.update {
+            val newActive = !it.isSearchActive
+            if (!newActive) {
+                loadData()
+            }
+            it.copy(isSearchActive = newActive, searchQuery = if (!newActive) "" else it.searchQuery)
+        }
+    }
+
+    // ========== Filtering ==========
+    fun setCategoryFilter(category: ExpenseCategory?) {
+        _uiState.update { it.copy(selectedCategory = category) }
+        viewModelScope.launch {
+            if (category == null) {
+                loadData()
+            } else {
+                repository.getByCategory(category.name).collect { results ->
+                    _uiState.update { it.copy(items = results) }
+                }
+            }
+        }
+    }
+
+    // ========== CRUD ==========
+
+    fun deleteItem(item: ExpenseItem) {
+        viewModelScope.launch {
+            repository.delete(item)
+        }
+    }
+
+    // ========== Form ==========
+
+    fun initAddForm(isIncome: Boolean = false) {
+        _formState.value = ExpenseFormState(isIncome = isIncome)
+    }
+
+    fun initEditForm(item: ExpenseItem) {
+        _formState.value = ExpenseFormState(
+            id = item.id,
+            title = item.title,
+            amount = item.amount.toString(),
+            isIncome = item.isIncome,
+            category = item.category,
+            date = item.date,
+            notes = item.notes ?: "",
+            isEditing = true,
+        )
+    }
+
+    fun updateFormTitle(value: String) {
+        _formState.update { it.copy(title = value, titleError = null) }
+    }
+
+    fun updateFormAmount(value: String) {
+        _formState.update { it.copy(amount = value, amountError = null) }
+    }
+
+    fun updateFormType(isIncome: Boolean) {
+        _formState.update { 
+            val newCategory = if (it.isIncome == isIncome) it.category else null
+            it.copy(isIncome = isIncome, category = newCategory, categoryError = null) 
+        }
+    }
+
+    fun updateFormCategory(value: ExpenseCategory) {
+        _formState.update { it.copy(category = value, categoryError = null) }
+    }
+
+    fun updateFormDate(value: Long?) {
+        _formState.update { it.copy(date = value, dateError = null) }
+    }
+
+    fun updateFormNotes(value: String) {
+        _formState.update { it.copy(notes = value) }
+    }
+
+    fun saveForm() {
+        val form = _formState.value
+
+        // Validate
+        var hasError = false
+        if (form.title.isBlank()) {
+            _formState.update { it.copy(titleError = "Title is required") }
+            hasError = true
+        }
+        val amountValue = form.amount.toDoubleOrNull()
+        if (amountValue == null || amountValue <= 0) {
+            _formState.update { it.copy(amountError = "Valid amount is required") }
+            hasError = true
+        }
+        if (form.category == null) {
+            _formState.update { it.copy(categoryError = "Category is required") }
+            hasError = true
+        }
+        if (form.date == null) {
+            _formState.update { it.copy(dateError = "Date is required") }
+            hasError = true
+        }
+        if (hasError) return
+
+        _formState.update { it.copy(isSaving = true) }
+
+        viewModelScope.launch {
+            try {
+                val item = ExpenseItem(
+                    id = if (form.isEditing) form.id else 0,
+                    title = form.title.trim(),
+                    amount = amountValue!!,
+                    isIncome = form.isIncome,
+                    category = form.category!!,
+                    date = form.date!!,
+                    notes = form.notes.ifBlank { null },
+                )
+                if (form.isEditing) {
+                    repository.update(item)
+                } else {
+                    repository.insert(item)
+                }
+                _formState.update { it.copy(isSaving = false, saveSuccess = true) }
+            } catch (e: Exception) {
+                _formState.update { it.copy(isSaving = false) }
+            }
+        }
+    }
+
+    fun resetSaveSuccess() {
+        _formState.update { it.copy(saveSuccess = false) }
+    }
+}
