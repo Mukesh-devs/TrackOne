@@ -13,6 +13,8 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import com.dev.trackone.core.common.util.DateUtils
+import java.util.Calendar
 import javax.inject.Inject
 
 @HiltViewModel
@@ -30,22 +32,50 @@ class ExpenseViewModel @Inject constructor(
         loadData()
     }
 
+    private fun getDateRange(period: TimePeriod, dateMillis: Long): Pair<Long, Long> {
+        val cal = Calendar.getInstance().apply { timeInMillis = dateMillis }
+        return when (period) {
+            TimePeriod.DAY -> {
+                DateUtils.getStartOfDay(dateMillis) to DateUtils.getEndOfDay(dateMillis)
+            }
+            TimePeriod.MONTH -> {
+                DateUtils.getStartOfMonth(dateMillis) to DateUtils.getEndOfMonth(dateMillis)
+            }
+            TimePeriod.YEAR -> {
+                cal.set(Calendar.MONTH, Calendar.JANUARY)
+                cal.set(Calendar.DAY_OF_MONTH, 1)
+                cal.set(Calendar.HOUR_OF_DAY, 0)
+                cal.set(Calendar.MINUTE, 0)
+                cal.set(Calendar.SECOND, 0)
+                cal.set(Calendar.MILLISECOND, 0)
+                val start = cal.timeInMillis
+                cal.set(Calendar.MONTH, Calendar.DECEMBER)
+                cal.set(Calendar.DAY_OF_MONTH, 31)
+                cal.set(Calendar.HOUR_OF_DAY, 23)
+                cal.set(Calendar.MINUTE, 59)
+                cal.set(Calendar.SECOND, 59)
+                cal.set(Calendar.MILLISECOND, 999)
+                start to cal.timeInMillis
+            }
+        }
+    }
+
     private fun loadData() {
+        val state = _uiState.value
+        val (start, end) = getDateRange(state.selectedPeriod, state.currentDate)
+
         viewModelScope.launch {
             combine(
-                repository.getAll(),
-                repository.getByType(isIncome = true),
-                repository.getByType(isIncome = false),
-            ) { all, income, expense ->
-                val totalInc = income.sumOf { it.amount }
-                val totalExp = expense.sumOf { it.amount }
-                
-                _uiState.update { state ->
-                    state.copy(
+                repository.getByDateRange(start, end),
+                repository.getTotalIncome(start, end),
+                repository.getTotalExpense(start, end),
+            ) { items, totalInc, totalExp ->
+                _uiState.update { s ->
+                    s.copy(
                         isLoading = false,
-                        items = all,
-                        incomeItems = income,
-                        expenseItems = expense,
+                        items = items,
+                        incomeItems = items.filter { it.isIncome },
+                        expenseItems = items.filter { !it.isIncome },
                         totalIncome = totalInc,
                         totalExpense = totalExp,
                         balance = totalInc - totalExp,
@@ -59,6 +89,34 @@ class ExpenseViewModel @Inject constructor(
                     }
                 }
                 .collect {}
+        }
+    }
+
+    // ========== Period Navigation ==========
+
+    fun setTimePeriod(period: TimePeriod) {
+        _uiState.update { it.copy(selectedPeriod = period, currentDate = System.currentTimeMillis()) }
+        loadData()
+    }
+
+    fun navigateDate(forward: Boolean) {
+        val state = _uiState.value
+        val cal = Calendar.getInstance().apply { timeInMillis = state.currentDate }
+        when (state.selectedPeriod) {
+            TimePeriod.DAY -> cal.add(Calendar.DAY_OF_MONTH, if (forward) 1 else -1)
+            TimePeriod.MONTH -> cal.add(Calendar.MONTH, if (forward) 1 else -1)
+            TimePeriod.YEAR -> cal.add(Calendar.YEAR, if (forward) 1 else -1)
+        }
+        _uiState.update { it.copy(currentDate = cal.timeInMillis) }
+        loadData()
+    }
+
+    fun getDateLabel(): String {
+        val state = _uiState.value
+        return when (state.selectedPeriod) {
+            TimePeriod.DAY -> DateUtils.formatDate(state.currentDate)
+            TimePeriod.MONTH -> DateUtils.formatMonthYear(state.currentDate)
+            TimePeriod.YEAR -> DateUtils.formatDate(state.currentDate, "yyyy")
         }
     }
 

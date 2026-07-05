@@ -4,6 +4,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,12 +18,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
+import androidx.compose.material.icons.filled.ChevronLeft
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Circle
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
@@ -30,6 +33,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -38,26 +42,29 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.dev.trackone.core.common.util.CurrencyUtils
 import com.dev.trackone.core.common.util.DateUtils
 import com.dev.trackone.core.ui.component.TrackOneCard
-import com.dev.trackone.core.ui.component.TrackOneChip
 import com.dev.trackone.core.ui.component.TrackOneDeleteDialog
 import com.dev.trackone.core.ui.component.TrackOneEmptyState
 import com.dev.trackone.core.ui.component.TrackOneLoadingState
 import com.dev.trackone.core.ui.component.TrackOneSearchBar
 import com.dev.trackone.core.ui.theme.Dimens
-import com.dev.trackone.feature.expense.domain.model.ExpenseCategory
 import com.dev.trackone.feature.expense.domain.model.ExpenseItem
 import com.dev.trackone.feature.expense.presentation.ExpenseUiState
+import com.dev.trackone.feature.expense.presentation.TimePeriod
 
 @Composable
 fun ExpenseHomeScreen(
     uiState: ExpenseUiState,
+    dateLabel: String,
     onSearchQueryChange: (String) -> Unit,
-    onCategoryFilterChange: (ExpenseCategory?) -> Unit,
+    onPeriodChange: (TimePeriod) -> Unit,
+    onNavigateDate: (Boolean) -> Unit,
     onEditItem: (ExpenseItem) -> Unit,
     onDeleteItem: (ExpenseItem) -> Unit,
     modifier: Modifier = Modifier,
@@ -84,13 +91,6 @@ fun ExpenseHomeScreen(
             uiState.isLoading -> {
                 TrackOneLoadingState(message = "Loading transactions...")
             }
-            uiState.items.isEmpty() && !uiState.isSearchActive && uiState.selectedCategory == null -> {
-                TrackOneEmptyState(
-                    icon = Icons.Default.AccountBalanceWallet,
-                    title = "No transactions yet",
-                    subtitle = "Tap + to add your first income or expense",
-                )
-            }
             else -> {
                 LazyColumn(
                     contentPadding = PaddingValues(
@@ -98,6 +98,31 @@ fun ExpenseHomeScreen(
                     ),
                     verticalArrangement = Arrangement.spacedBy(Dimens.SpacingSm),
                 ) {
+                    // Period Toggle (Day / Month / Year)
+                    item {
+                        TimePeriodToggle(
+                            selectedPeriod = uiState.selectedPeriod,
+                            onPeriodSelected = onPeriodChange,
+                            modifier = Modifier.padding(
+                                horizontal = Dimens.SpacingLg,
+                                vertical = Dimens.SpacingSm,
+                            ),
+                        )
+                    }
+
+                    // Date Navigation (< date >)
+                    item {
+                        DateNavigationRow(
+                            dateLabel = dateLabel,
+                            onPrevious = { onNavigateDate(false) },
+                            onNext = { onNavigateDate(true) },
+                            modifier = Modifier.padding(
+                                horizontal = Dimens.SpacingLg,
+                            ),
+                        )
+                    }
+
+                    // Balance Card
                     item {
                         BalanceCard(
                             balance = uiState.balance,
@@ -110,18 +135,12 @@ fun ExpenseHomeScreen(
                         )
                     }
 
-                    item {
-                        CategoryFilterRow(
-                            selectedCategory = uiState.selectedCategory,
-                            onCategorySelected = onCategoryFilterChange,
-                        )
-                    }
-
                     if (uiState.items.isEmpty()) {
                         item {
                             TrackOneEmptyState(
                                 icon = Icons.Default.AccountBalanceWallet,
-                                title = "No results found",
+                                title = "No transactions",
+                                subtitle = "No transactions found for this period",
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(vertical = Dimens.SpacingXxl),
@@ -156,6 +175,94 @@ fun ExpenseHomeScreen(
             },
             onDismiss = { itemToDelete = null },
         )
+    }
+}
+
+/**
+ * Day / Month / Year segmented toggle.
+ */
+@Composable
+private fun TimePeriodToggle(
+    selectedPeriod: TimePeriod,
+    onPeriodSelected: (TimePeriod) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(4.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+        ) {
+            TimePeriod.entries.forEach { period ->
+                val isSelected = period == selectedPeriod
+                Surface(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(10.dp))
+                        .clickable { onPeriodSelected(period) },
+                    shape = RoundedCornerShape(10.dp),
+                    color = if (isSelected)
+                        MaterialTheme.colorScheme.primary
+                    else
+                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0f),
+                ) {
+                    Text(
+                        text = period.label,
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                        color = if (isSelected)
+                            MaterialTheme.colorScheme.onPrimary
+                        else
+                            MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(vertical = 10.dp),
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Left/Right arrow date navigator showing the current date label.
+ */
+@Composable
+private fun DateNavigationRow(
+    dateLabel: String,
+    onPrevious: () -> Unit,
+    onNext: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        IconButton(onClick = onPrevious) {
+            Icon(
+                imageVector = Icons.Default.ChevronLeft,
+                contentDescription = "Previous",
+                tint = MaterialTheme.colorScheme.onSurface,
+            )
+        }
+        Text(
+            text = dateLabel,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+        IconButton(onClick = onNext) {
+            Icon(
+                imageVector = Icons.Default.ChevronRight,
+                contentDescription = "Next",
+                tint = MaterialTheme.colorScheme.onSurface,
+            )
+        }
     }
 }
 
@@ -243,33 +350,6 @@ private fun BalanceStat(
             fontWeight = FontWeight.SemiBold,
             color = color,
         )
-    }
-}
-
-@Composable
-private fun CategoryFilterRow(
-    selectedCategory: ExpenseCategory?,
-    onCategorySelected: (ExpenseCategory?) -> Unit,
-) {
-    LazyRow(
-        contentPadding = PaddingValues(horizontal = Dimens.SpacingLg),
-        horizontalArrangement = Arrangement.spacedBy(Dimens.SpacingSm),
-        modifier = Modifier.padding(vertical = Dimens.SpacingSm),
-    ) {
-        item {
-            TrackOneChip(
-                label = "All",
-                selected = selectedCategory == null,
-                onClick = { onCategorySelected(null) },
-            )
-        }
-        items(ExpenseCategory.entries.toTypedArray()) { category ->
-            TrackOneChip(
-                label = category.displayName,
-                selected = selectedCategory == category,
-                onClick = { onCategorySelected(category) },
-            )
-        }
     }
 }
 

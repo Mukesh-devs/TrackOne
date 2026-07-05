@@ -103,8 +103,10 @@ fun ExpenseNavigation() {
                 composable(ExpenseRoutes.HOME) {
                     ExpenseHomeScreen(
                         uiState = uiState,
+                        dateLabel = viewModel.getDateLabel(),
                         onSearchQueryChange = { viewModel.onSearchQueryChange(it) },
-                        onCategoryFilterChange = { viewModel.setCategoryFilter(it) },
+                        onPeriodChange = { viewModel.setTimePeriod(it) },
+                        onNavigateDate = { viewModel.navigateDate(it) },
                         onEditItem = { item ->
                             viewModel.initEditForm(item)
                             navController.navigate(ExpenseRoutes.EDIT)

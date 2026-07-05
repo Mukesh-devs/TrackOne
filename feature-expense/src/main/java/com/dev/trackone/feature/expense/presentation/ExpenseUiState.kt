@@ -4,6 +4,15 @@ import com.dev.trackone.feature.expense.domain.model.ExpenseCategory
 import com.dev.trackone.feature.expense.domain.model.ExpenseItem
 
 /**
+ * Time period for expense filtering.
+ */
+enum class TimePeriod(val label: String) {
+    DAY("Day"),
+    MONTH("Month"),
+    YEAR("Year"),
+}
+
+/**
  * UI state for the Expense module screens.
  */
 data class ExpenseUiState(
@@ -18,6 +27,8 @@ data class ExpenseUiState(
     val isSearchActive: Boolean = false,
     val error: String? = null,
     val selectedCategory: ExpenseCategory? = null,
+    val selectedPeriod: TimePeriod = TimePeriod.MONTH,
+    val currentDate: Long = System.currentTimeMillis(),
 )
 
 /**
