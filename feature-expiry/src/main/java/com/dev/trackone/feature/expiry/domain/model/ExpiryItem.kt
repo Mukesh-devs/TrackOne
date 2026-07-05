@@ -20,7 +20,7 @@ data class ExpiryItem(
 )
 
 /**
- * A group of expiry items sharing the same name.
+ * A group of expiry items sharing the same provider.
  * e.g., "Netflix" group containing Netflix Personal, Netflix Family, etc.
  */
 data class ExpiryGroup(

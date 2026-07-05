@@ -124,62 +124,38 @@ private fun ExpiryGroupCard(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.weight(1f),
+            Column(
+                modifier = Modifier.weight(1f)
             ) {
-                Icon(
-                    imageVector = Icons.Default.Timer,
-                    contentDescription = null,
-                    tint = if (group.hasExpiredItems) {
-                        MaterialTheme.colorScheme.error
-                    } else {
-                        MaterialTheme.colorScheme.primary
-                    },
-                    modifier = Modifier.size(Dimens.IconSizeLg),
-                )
-                Spacer(modifier = Modifier.width(Dimens.SpacingMd))
-                Column {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = group.name,
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold,
-                        )
-                        if (group.hasMultiple) {
-                            Spacer(modifier = Modifier.width(Dimens.SpacingSm))
-                            Badge(
-                                containerColor = MaterialTheme.colorScheme.primaryContainer,
-                                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                            ) {
-                                Text(
-                                    text = "${group.itemCount}",
-                                    style = MaterialTheme.typography.labelSmall,
-                                )
-                            }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = group.name,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    if (group.hasMultiple) {
+                        Spacer(modifier = Modifier.width(Dimens.SpacingSm))
+                        Badge(
+                            containerColor = MaterialTheme.colorScheme.primaryContainer,
+                            contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                        ) {
+                            Text(
+                                text = "${group.itemCount}",
+                                style = MaterialTheme.typography.labelSmall,
+                            )
                         }
                     }
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        text = item.provider,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    if (nearestExpiry != null) {
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Text(
-                            text = DateUtils.getExpiryLabel(nearestExpiry),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = if (DateUtils.isExpired(nearestExpiry)) {
-                                MaterialTheme.colorScheme.error
-                            } else if (DateUtils.isWithinDays(nearestExpiry, 7)) {
-                                MaterialTheme.colorScheme.tertiary
-                            } else {
-                                MaterialTheme.colorScheme.onSurfaceVariant
-                            },
-                        )
-                    }
                 }
+                Spacer(modifier = Modifier.height(2.dp))
+                
+                val purchasedStr = DateUtils.formatDateShort(item.purchasedDate)
+                val expiryStr = nearestExpiry?.let { DateUtils.formatDateShort(it) } ?: "N/A"
+                Text(
+                    text = "$purchasedStr -> $expiryStr",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                )
             }
 
             Column(
@@ -193,11 +169,20 @@ private fun ExpiryGroupCard(
                         color = MaterialTheme.colorScheme.primary,
                     )
                 }
-                Icon(
-                    imageVector = Icons.Default.ChevronRight,
-                    contentDescription = "View details",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                if (nearestExpiry != null) {
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = DateUtils.getExpiryLabel(nearestExpiry),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = if (DateUtils.isExpired(nearestExpiry)) {
+                            MaterialTheme.colorScheme.error
+                        } else if (DateUtils.isWithinDays(nearestExpiry, 7)) {
+                            MaterialTheme.colorScheme.tertiary
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        },
+                    )
+                }
             }
         }
     }

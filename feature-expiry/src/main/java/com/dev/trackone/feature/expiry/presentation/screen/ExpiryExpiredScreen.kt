@@ -41,8 +41,8 @@ fun ExpiryExpiredScreen(
         }
         else -> {
             val expiredGroups = uiState.expiredItems
-                .groupBy { it.name }
-                .map { (name, items) -> ExpiryGroup(name = name, items = items) }
+                .groupBy { it.provider }
+                .map { (provider, items) -> ExpiryGroup(name = provider, items = items) }
 
             LazyColumn(
                 modifier = modifier.fillMaxSize(),

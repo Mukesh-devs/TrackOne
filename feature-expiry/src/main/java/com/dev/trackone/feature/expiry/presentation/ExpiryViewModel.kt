@@ -37,8 +37,8 @@ class ExpiryViewModel @Inject constructor(
                 repository.getExpired(),
                 repository.getAllProviders(),
             ) { all, expired, providers ->
-                val groups = all.groupBy { it.name }
-                    .map { (name, items) -> ExpiryGroup(name = name, items = items) }
+                val groups = all.groupBy { it.provider }
+                    .map { (provider, items) -> ExpiryGroup(name = provider, items = items) }
                     .sortedBy { it.nearestExpiry ?: Long.MAX_VALUE }
 
                 _uiState.update { state ->
@@ -72,8 +72,8 @@ class ExpiryViewModel @Inject constructor(
                 repository.search(query)
                     .catch { }
                     .collect { results ->
-                        val groups = results.groupBy { it.name }
-                            .map { (name, items) -> ExpiryGroup(name = name, items = items) }
+                        val groups = results.groupBy { it.provider }
+                            .map { (provider, items) -> ExpiryGroup(name = provider, items = items) }
                         _uiState.update { it.copy(groups = groups) }
                     }
             }
