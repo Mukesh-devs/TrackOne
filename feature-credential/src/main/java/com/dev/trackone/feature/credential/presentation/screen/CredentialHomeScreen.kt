@@ -26,6 +26,8 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.outlined.StarOutline
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -131,6 +133,11 @@ fun CredentialHomeScreen(
                             )
                         }
                     }
+
+                    // Bottom spacer for floating bar
+                    item {
+                        Spacer(modifier = Modifier.height(80.dp))
+                    }
                 }
             }
         }
@@ -187,6 +194,8 @@ private fun CredentialItemCard(
 ) {
     TrackOneCard(modifier = modifier) {
         Column {
+            var passwordVisible by remember { mutableStateOf(false) }
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -228,7 +237,12 @@ private fun CredentialItemCard(
                 CopyableRow("Email", item.email) { onCopy(item.email, "Email") }
             }
             
-            CopyableRow("Password", "••••••••") { onCopy(item.password, "Password") }
+            CredentialPasswordRow(
+                password = item.password,
+                passwordVisible = passwordVisible,
+                onToggleVisibility = { passwordVisible = !passwordVisible },
+                onCopy = { onCopy(item.password, "Password") },
+            )
             
             if (item.url.isNotBlank()) {
                 Spacer(modifier = Modifier.height(Dimens.SpacingSm))
@@ -259,6 +273,52 @@ private fun CredentialItemCard(
                         modifier = Modifier.size(Dimens.IconSizeMd),
                     )
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CredentialPasswordRow(
+    password: String,
+    passwordVisible: Boolean,
+    onToggleVisibility: () -> Unit,
+    onCopy: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 2.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = "Password",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = if (passwordVisible) password else "••••••••",
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            Spacer(modifier = Modifier.width(Dimens.SpacingXs))
+            IconButton(onClick = onToggleVisibility, modifier = Modifier.size(24.dp)) {
+                Icon(
+                    imageVector = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                    contentDescription = if (passwordVisible) "Hide password" else "Show password",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(16.dp),
+                )
+            }
+            Spacer(modifier = Modifier.width(Dimens.SpacingXs))
+            IconButton(onClick = onCopy, modifier = Modifier.size(24.dp)) {
+                Icon(
+                    imageVector = Icons.Default.ContentCopy,
+                    contentDescription = "Copy Password",
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(16.dp),
+                )
             }
         }
     }

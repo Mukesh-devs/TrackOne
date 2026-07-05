@@ -30,6 +30,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.dp
 import com.dev.trackone.core.common.util.DateUtils
 import com.dev.trackone.core.ui.component.TrackOneDatePicker
 import com.dev.trackone.core.ui.component.TrackOneDropdownField
@@ -76,12 +77,7 @@ fun ExpenseAddScreen(
             .imePadding(),
         verticalArrangement = Arrangement.spacedBy(Dimens.SpacingMd),
     ) {
-        Text(
-            text = if (formState.isEditing) "Edit Transaction" else "Add Transaction",
-            style = MaterialTheme.typography.headlineSmall,
-        )
-        
-        Spacer(modifier = Modifier.height(Dimens.SpacingSm))
+
         
         SingleChoiceSegmentedButtonRow(
             modifier = Modifier.fillMaxWidth()
@@ -188,7 +184,7 @@ fun ExpenseAddScreen(
             )
         }
         
-        Spacer(modifier = Modifier.height(Dimens.SpacingXxl))
+        Spacer(modifier = Modifier.height(100.dp))
     }
 
     if (showDatePicker) {

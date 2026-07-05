@@ -137,6 +137,11 @@ fun ExpenseHomeScreen(
                             )
                         }
                     }
+
+                    // Bottom spacer for floating bar
+                    item {
+                        Spacer(modifier = Modifier.height(80.dp))
+                    }
                 }
             }
         }

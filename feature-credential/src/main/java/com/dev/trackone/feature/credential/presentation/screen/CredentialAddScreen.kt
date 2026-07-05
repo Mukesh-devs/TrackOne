@@ -38,6 +38,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.unit.dp
 import com.dev.trackone.core.ui.component.TrackOneTextField
 import com.dev.trackone.core.ui.theme.Dimens
 import com.dev.trackone.feature.credential.presentation.CredentialFormState
@@ -73,12 +74,7 @@ fun CredentialAddScreen(
             .imePadding(),
         verticalArrangement = Arrangement.spacedBy(Dimens.SpacingMd),
     ) {
-        Text(
-            text = if (formState.isEditing) "Edit Credential" else "Add Credential",
-            style = MaterialTheme.typography.headlineSmall,
-        )
-        
-        Spacer(modifier = Modifier.height(Dimens.SpacingSm))
+
 
         TrackOneTextField(
             value = formState.title,
@@ -180,6 +176,6 @@ fun CredentialAddScreen(
             )
         }
         
-        Spacer(modifier = Modifier.height(Dimens.SpacingXxl))
+        Spacer(modifier = Modifier.height(100.dp))
     }
 }

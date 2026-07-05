@@ -20,6 +20,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -57,35 +59,25 @@ fun ExpiryDetailScreen(
     var itemToDelete by remember { mutableStateOf<ExpiryItem?>(null) }
 
     Column(modifier = modifier.fillMaxSize()) {
-        // Group header
-        Text(
-            text = group.name,
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(
-                horizontal = Dimens.SpacingLg,
-                vertical = Dimens.SpacingMd,
-            ),
-        )
-
-        if (group.hasMultiple) {
-            Text(
-                text = "${group.itemCount} entries",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = Dimens.SpacingLg),
-            )
-        }
-
-        Spacer(modifier = Modifier.height(Dimens.SpacingSm))
-
         LazyColumn(
             contentPadding = PaddingValues(
                 horizontal = Dimens.SpacingLg,
                 vertical = Dimens.SpacingSm,
+                // Extra bottom padding for floating bottom bar
             ),
             verticalArrangement = Arrangement.spacedBy(Dimens.SpacingMd),
         ) {
+            if (group.hasMultiple) {
+                item {
+                    Text(
+                        text = "${group.itemCount} entries",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(bottom = Dimens.SpacingSm),
+                    )
+                }
+            }
+
             items(
                 items = group.items,
                 key = { it.id },
@@ -96,6 +88,11 @@ fun ExpiryDetailScreen(
                     onDelete = { itemToDelete = item },
                     onCopy = { text, label -> copyToClipboard(context, text, label) },
                 )
+            }
+
+            // Bottom spacer for floating bar
+            item {
+                Spacer(modifier = Modifier.height(80.dp))
             }
         }
     }
@@ -122,6 +119,8 @@ private fun ExpiryDetailCard(
     modifier: Modifier = Modifier,
 ) {
     TrackOneCard(modifier = modifier) {
+        var passwordVisible by remember { mutableStateOf(false) }
+
         // Title and actions
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -202,7 +201,12 @@ private fun ExpiryDetailCard(
                 CopyableRow("Email", email) { onCopy(email, "Email") }
             }
             item.password?.takeIf { it.isNotBlank() }?.let { password ->
-                CopyableRow("Password", "••••••••") { onCopy(password, "Password") }
+                PasswordToggleRow(
+                    password = password,
+                    passwordVisible = passwordVisible,
+                    onToggleVisibility = { passwordVisible = !passwordVisible },
+                    onCopy = { onCopy(password, "Password") },
+                )
             }
         }
     }
@@ -230,6 +234,49 @@ private fun DetailRow(
             style = MaterialTheme.typography.bodyMedium,
             color = valueColor,
         )
+    }
+}
+
+@Composable
+private fun PasswordToggleRow(
+    password: String,
+    passwordVisible: Boolean,
+    onToggleVisibility: () -> Unit,
+    onCopy: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 2.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = "Password",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = if (passwordVisible) password else "••••••••",
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            Spacer(modifier = Modifier.width(Dimens.SpacingXs))
+            IconButton(onClick = onToggleVisibility) {
+                Icon(
+                    imageVector = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                    contentDescription = if (passwordVisible) "Hide password" else "Show password",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            IconButton(onClick = onCopy) {
+                Icon(
+                    imageVector = Icons.Default.ContentCopy,
+                    contentDescription = "Copy Password",
+                    tint = MaterialTheme.colorScheme.primary,
+                )
+            }
+        }
     }
 }
 

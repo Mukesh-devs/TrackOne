@@ -2,13 +2,16 @@ package com.dev.trackone.feature.expiry.presentation.screen
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.EventBusy
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import com.dev.trackone.core.ui.component.TrackOneEmptyState
 import com.dev.trackone.core.ui.component.TrackOneLoadingState
 import com.dev.trackone.core.ui.theme.Dimens
@@ -54,6 +57,11 @@ fun ExpiryExpiredScreen(
                     key = { it.name },
                 ) { group ->
                     ExpiredItemCard(group = group, onClick = { onGroupClick(group) })
+                }
+
+                // Bottom spacer for floating bar
+                item {
+                    Spacer(modifier = Modifier.height(80.dp))
                 }
             }
         }

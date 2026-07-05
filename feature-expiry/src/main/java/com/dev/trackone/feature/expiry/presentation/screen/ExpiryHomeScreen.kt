@@ -95,6 +95,11 @@ fun ExpiryHomeScreen(
                             onClick = { onGroupClick(group) },
                         )
                     }
+
+                    // Bottom spacer for floating bar
+                    item {
+                        Spacer(modifier = Modifier.height(80.dp))
+                    }
                 }
             }
         }

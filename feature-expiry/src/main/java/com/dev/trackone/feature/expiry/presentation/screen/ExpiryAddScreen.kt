@@ -33,6 +33,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.dp
 import com.dev.trackone.core.common.util.DateUtils
 import com.dev.trackone.core.ui.component.TrackOneDatePicker
 import com.dev.trackone.core.ui.component.TrackOneTextField
@@ -76,12 +77,7 @@ fun ExpiryAddScreen(
             .imePadding(),
         verticalArrangement = Arrangement.spacedBy(Dimens.SpacingMd),
     ) {
-        Text(
-            text = if (formState.isEditing) "Edit Item" else "Add New Item",
-            style = MaterialTheme.typography.headlineSmall,
-        )
 
-        Spacer(modifier = Modifier.height(Dimens.SpacingSm))
 
         // Name
         TrackOneTextField(
@@ -232,7 +228,7 @@ fun ExpiryAddScreen(
             )
         }
 
-        Spacer(modifier = Modifier.height(Dimens.SpacingXxl))
+        Spacer(modifier = Modifier.height(100.dp))
     }
 
     // Date pickers
