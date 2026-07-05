@@ -124,6 +124,7 @@ fun ExpenseNavigation() {
                         onAmountChange = viewModel::updateFormAmount,
                         onTypeChange = viewModel::updateFormType,
                         onCategoryChange = viewModel::updateFormCategory,
+                        onPaymentModeChange = viewModel::updateFormPaymentMode,
                         onDateChange = viewModel::updateFormDate,
                         onNotesChange = viewModel::updateFormNotes,
                         onSave = viewModel::saveForm,
@@ -135,13 +136,14 @@ fun ExpenseNavigation() {
                         },
                     )
                 }
-                
                 composable(ExpenseRoutes.STATS) {
-                    // Placeholder stats screen
-                    com.dev.trackone.core.ui.component.TrackOneEmptyState(
-                        icon = Icons.Default.PieChart,
-                        title = "Statistics",
-                        subtitle = "Charts and statistics coming soon",
+                    com.dev.trackone.feature.expense.presentation.screen.ExpenseStatsScreen(
+                        uiState = uiState,
+                        dateLabel = viewModel.getDateLabel(),
+                        onDateRangeSelected = viewModel::setStatsDateRange,
+                        onPeriodChange = viewModel::setTimePeriod,
+                        onNavigateDate = viewModel::navigateDate,
+                        getCsvData = viewModel::generateCsvData
                     )
                 }
 
@@ -161,6 +163,7 @@ fun ExpenseNavigation() {
                         onAmountChange = viewModel::updateFormAmount,
                         onTypeChange = viewModel::updateFormType,
                         onCategoryChange = viewModel::updateFormCategory,
+                        onPaymentModeChange = viewModel::updateFormPaymentMode,
                         onDateChange = viewModel::updateFormDate,
                         onNotesChange = viewModel::updateFormNotes,
                         onSave = viewModel::saveForm,

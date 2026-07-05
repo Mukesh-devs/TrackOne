@@ -2,6 +2,7 @@ package com.dev.trackone.feature.expense.presentation
 
 import com.dev.trackone.feature.expense.domain.model.ExpenseCategory
 import com.dev.trackone.feature.expense.domain.model.ExpenseItem
+import com.dev.trackone.feature.expense.domain.model.PaymentMode
 
 /**
  * Time period for expense filtering.
@@ -29,6 +30,13 @@ data class ExpenseUiState(
     val selectedCategory: ExpenseCategory? = null,
     val selectedPeriod: TimePeriod = TimePeriod.MONTH,
     val currentDate: Long = System.currentTimeMillis(),
+
+    // Statistics specific state for CSV export
+    val statsStartDate: Long? = null,
+    val statsEndDate: Long? = null,
+    val statsItems: List<ExpenseItem> = emptyList(),
+    val statsTotalIncome: Double = 0.0,
+    val statsTotalExpense: Double = 0.0,
 )
 
 /**
@@ -40,12 +48,14 @@ data class ExpenseFormState(
     val amount: String = "",
     val isIncome: Boolean = false,
     val category: ExpenseCategory? = null,
+    val paymentMode: PaymentMode? = null,
     val date: Long? = System.currentTimeMillis(),
     val notes: String = "",
     val isEditing: Boolean = false,
     val titleError: String? = null,
     val amountError: String? = null,
     val categoryError: String? = null,
+    val paymentModeError: String? = null,
     val dateError: String? = null,
     val isSaving: Boolean = false,
     val saveSuccess: Boolean = false,

@@ -14,6 +14,7 @@ data class ExpenseEntity(
     val amount: Double,
     val isIncome: Boolean, // true for Income, false for Expense
     val category: String,
+    val paymentMode: String = "CASH",
     val date: Long,
     val notes: String? = null,
     val createdAt: Long = System.currentTimeMillis(),

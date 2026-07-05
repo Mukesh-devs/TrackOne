@@ -3,6 +3,7 @@ package com.dev.trackone.feature.expense.data.mapper
 import com.dev.trackone.feature.expense.data.local.ExpenseEntity
 import com.dev.trackone.feature.expense.domain.model.ExpenseCategory
 import com.dev.trackone.feature.expense.domain.model.ExpenseItem
+import com.dev.trackone.feature.expense.domain.model.PaymentMode
 
 /**
  * Mappers between [ExpenseEntity] (data layer) and [ExpenseItem] (domain layer).
@@ -14,6 +15,7 @@ fun ExpenseEntity.toDomain(): ExpenseItem = ExpenseItem(
     amount = amount,
     isIncome = isIncome,
     category = ExpenseCategory.fromString(category),
+    paymentMode = PaymentMode.fromString(paymentMode),
     date = date,
     notes = notes,
     createdAt = createdAt,
@@ -26,6 +28,7 @@ fun ExpenseItem.toEntity(): ExpenseEntity = ExpenseEntity(
     amount = amount,
     isIncome = isIncome,
     category = category.name,
+    paymentMode = paymentMode.name,
     date = date,
     notes = notes,
     createdAt = createdAt,

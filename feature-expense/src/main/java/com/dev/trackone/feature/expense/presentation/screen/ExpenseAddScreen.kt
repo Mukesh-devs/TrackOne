@@ -37,6 +37,7 @@ import com.dev.trackone.core.ui.component.TrackOneDropdownField
 import com.dev.trackone.core.ui.component.TrackOneTextField
 import com.dev.trackone.core.ui.theme.Dimens
 import com.dev.trackone.feature.expense.domain.model.ExpenseCategory
+import com.dev.trackone.feature.expense.domain.model.PaymentMode
 import com.dev.trackone.feature.expense.presentation.ExpenseFormState
 
 @Composable
@@ -46,6 +47,7 @@ fun ExpenseAddScreen(
     onAmountChange: (String) -> Unit,
     onTypeChange: (Boolean) -> Unit,
     onCategoryChange: (ExpenseCategory) -> Unit,
+    onPaymentModeChange: (PaymentMode) -> Unit,
     onDateChange: (Long?) -> Unit,
     onNotesChange: (String) -> Unit,
     onSave: () -> Unit,
@@ -68,6 +70,9 @@ fun ExpenseAddScreen(
 
     val categoryNames = categories.map { it.displayName }
     val selectedCategoryName = formState.category?.displayName ?: ""
+
+    val paymentModeNames = PaymentMode.entries.map { it.displayName }
+    val selectedPaymentModeName = formState.paymentMode?.displayName ?: ""
 
     Column(
         modifier = modifier
@@ -119,19 +124,22 @@ fun ExpenseAddScreen(
             errorMessage = formState.titleError,
         )
 
+
+
+        // Mode of Payment dropdown
         TrackOneDropdownField(
-            selectedValue = selectedCategoryName,
-            options = categoryNames,
-            onOptionSelected = { name -> 
-                val category = categories.find { it.displayName == name }
-                category?.let { onCategoryChange(it) }
+            selectedValue = selectedPaymentModeName,
+            options = paymentModeNames,
+            onOptionSelected = { name ->
+                val mode = PaymentMode.entries.find { it.displayName == name }
+                mode?.let { onPaymentModeChange(it) }
             },
-            label = "Category *",
+            label = "Mode of Payment *",
         )
-        
-        if (formState.categoryError != null) {
+
+        if (formState.paymentModeError != null) {
             Text(
-                text = formState.categoryError,
+                text = formState.paymentModeError,
                 color = MaterialTheme.colorScheme.error,
                 style = MaterialTheme.typography.bodySmall,
                 modifier = Modifier.padding(start = Dimens.SpacingMd)

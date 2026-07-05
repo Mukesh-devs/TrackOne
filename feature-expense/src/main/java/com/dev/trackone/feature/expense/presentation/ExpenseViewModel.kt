@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.dev.trackone.feature.expense.domain.model.ExpenseCategory
 import com.dev.trackone.feature.expense.domain.model.ExpenseItem
+import com.dev.trackone.feature.expense.domain.model.PaymentMode
 import com.dev.trackone.feature.expense.domain.repository.ExpenseRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -169,6 +170,59 @@ class ExpenseViewModel @Inject constructor(
         }
     }
 
+    // ========== Statistics ==========
+
+    fun setStatsDateRange(start: Long?, end: Long?) {
+        _uiState.update { it.copy(statsStartDate = start, statsEndDate = end) }
+        loadStatsData()
+    }
+
+    private fun loadStatsData() {
+        val state = _uiState.value
+        if (state.statsStartDate == null || state.statsEndDate == null) {
+            _uiState.update { it.copy(
+                statsItems = emptyList(),
+                statsTotalIncome = 0.0,
+                statsTotalExpense = 0.0
+            ) }
+            return
+        }
+
+        val endOfDay = com.dev.trackone.core.common.util.DateUtils.getEndOfDay(state.statsEndDate)
+
+        viewModelScope.launch {
+            repository.getByDateRange(state.statsStartDate, endOfDay).collect { results ->
+                val income = results.filter { it.isIncome }.sumOf { it.amount }
+                val expense = results.filter { !it.isIncome }.sumOf { it.amount }
+
+                _uiState.update { it.copy(
+                    statsItems = results,
+                    statsTotalIncome = income,
+                    statsTotalExpense = expense
+                ) }
+            }
+        }
+    }
+
+    fun generateCsvData(): String {
+        val items = _uiState.value.statsItems
+        if (items.isEmpty()) return ""
+
+        val csvBuilder = StringBuilder()
+        csvBuilder.append("ID,Title,Amount,Type,Category,Mode of Payment,Date,Notes\n")
+
+        items.forEach { item ->
+            val dateStr = com.dev.trackone.core.common.util.DateUtils.formatDate(item.date)
+            val type = if (item.isIncome) "Income" else "Expense"
+            val notes = item.notes?.replace(",", " ") ?: "" // simple escaping
+            val title = item.title.replace(",", " ")
+            
+            csvBuilder.append("${item.id},${title},${item.amount},${type},${item.category.displayName},${item.paymentMode.displayName},${dateStr},${notes}\n")
+        }
+
+        return csvBuilder.toString()
+    }
+
     // ========== Form ==========
 
     fun initAddForm(isIncome: Boolean = false) {
@@ -182,6 +236,7 @@ class ExpenseViewModel @Inject constructor(
             amount = item.amount.toString(),
             isIncome = item.isIncome,
             category = item.category,
+            paymentMode = item.paymentMode,
             date = item.date,
             notes = item.notes ?: "",
             isEditing = true,
@@ -215,6 +270,10 @@ class ExpenseViewModel @Inject constructor(
         _formState.update { it.copy(notes = value) }
     }
 
+    fun updateFormPaymentMode(value: PaymentMode) {
+        _formState.update { it.copy(paymentMode = value, paymentModeError = null) }
+    }
+
     fun saveForm() {
         val form = _formState.value
 
@@ -229,8 +288,8 @@ class ExpenseViewModel @Inject constructor(
             _formState.update { it.copy(amountError = "Valid amount is required") }
             hasError = true
         }
-        if (form.category == null) {
-            _formState.update { it.copy(categoryError = "Category is required") }
+        if (form.paymentMode == null) {
+            _formState.update { it.copy(paymentModeError = "Payment mode is required") }
             hasError = true
         }
         if (form.date == null) {
@@ -248,7 +307,8 @@ class ExpenseViewModel @Inject constructor(
                     title = form.title.trim(),
                     amount = amountValue!!,
                     isIncome = form.isIncome,
-                    category = form.category!!,
+                    category = form.category ?: if (form.isIncome) ExpenseCategory.OTHER_INCOME else ExpenseCategory.OTHER_EXPENSE,
+                    paymentMode = form.paymentMode!!,
                     date = form.date!!,
                     notes = form.notes.ifBlank { null },
                 )

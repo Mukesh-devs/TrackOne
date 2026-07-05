@@ -9,6 +9,7 @@ data class ExpenseItem(
     val amount: Double,
     val isIncome: Boolean,
     val category: ExpenseCategory,
+    val paymentMode: PaymentMode = PaymentMode.CASH,
     val date: Long,
     val notes: String? = null,
     val createdAt: Long = System.currentTimeMillis(),
@@ -48,5 +49,23 @@ enum class ExpenseCategory(val displayName: String, val isIncome: Boolean) {
         
         fun getIncomeCategories() = entries.filter { it.isIncome }
         fun getExpenseCategories() = entries.filter { !it.isIncome }
+    }
+}
+
+/**
+ * Mode of payment for transactions.
+ */
+enum class PaymentMode(val displayName: String) {
+    CREDIT_CARD("Credit Card"),
+    DEBIT_CARD("Debit Card"),
+    UPI("UPI"),
+    CASH("Cash"),
+    NET_BANKING("Net Banking"),
+    OTHERS("Others");
+
+    companion object {
+        fun fromString(name: String): PaymentMode {
+            return entries.find { it.name == name } ?: OTHERS
+        }
     }
 }

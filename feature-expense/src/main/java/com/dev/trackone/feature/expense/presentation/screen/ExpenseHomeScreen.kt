@@ -3,8 +3,10 @@ package com.dev.trackone.feature.expense.presentation.screen
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -29,12 +31,13 @@ import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Circle
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -49,7 +52,6 @@ import androidx.compose.ui.unit.dp
 import com.dev.trackone.core.common.util.CurrencyUtils
 import com.dev.trackone.core.common.util.DateUtils
 import com.dev.trackone.core.ui.component.TrackOneCard
-import com.dev.trackone.core.ui.component.TrackOneDeleteDialog
 import com.dev.trackone.core.ui.component.TrackOneEmptyState
 import com.dev.trackone.core.ui.component.TrackOneLoadingState
 import com.dev.trackone.core.ui.component.TrackOneSearchBar
@@ -69,9 +71,10 @@ fun ExpenseHomeScreen(
     onDeleteItem: (ExpenseItem) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var itemToDelete by remember { mutableStateOf<ExpenseItem?>(null) }
+    var selectedItem by remember { mutableStateOf<ExpenseItem?>(null) }
 
     Column(modifier = modifier.fillMaxSize()) {
+        // Search bar (fixed)
         AnimatedVisibility(
             visible = uiState.isSearchActive,
             enter = fadeIn(),
@@ -92,179 +95,121 @@ fun ExpenseHomeScreen(
                 TrackOneLoadingState(message = "Loading transactions...")
             }
             else -> {
-                LazyColumn(
-                    contentPadding = PaddingValues(
-                        bottom = Dimens.SpacingLg,
+                // Fixed: Period Toggle
+                SharedTimePeriodToggle(
+                    selectedPeriod = uiState.selectedPeriod,
+                    onPeriodSelected = onPeriodChange,
+                    modifier = Modifier.padding(
+                        horizontal = Dimens.SpacingLg,
+                        vertical = Dimens.SpacingSm,
                     ),
-                    verticalArrangement = Arrangement.spacedBy(Dimens.SpacingSm),
-                ) {
-                    // Period Toggle (Day / Month / Year)
-                    item {
-                        TimePeriodToggle(
-                            selectedPeriod = uiState.selectedPeriod,
-                            onPeriodSelected = onPeriodChange,
-                            modifier = Modifier.padding(
-                                horizontal = Dimens.SpacingLg,
-                                vertical = Dimens.SpacingSm,
-                            ),
-                        )
-                    }
+                )
 
-                    // Date Navigation (< date >)
-                    item {
-                        DateNavigationRow(
-                            dateLabel = dateLabel,
-                            onPrevious = { onNavigateDate(false) },
-                            onNext = { onNavigateDate(true) },
-                            modifier = Modifier.padding(
-                                horizontal = Dimens.SpacingLg,
-                            ),
-                        )
-                    }
+                // Fixed: Date Navigation
+                SharedDateNavigationRow(
+                    dateLabel = dateLabel,
+                    onPrevious = { onNavigateDate(false) },
+                    onNext = { onNavigateDate(true) },
+                    modifier = Modifier.padding(
+                        horizontal = Dimens.SpacingLg,
+                    ),
+                )
 
-                    // Balance Card
-                    item {
-                        BalanceCard(
-                            balance = uiState.balance,
-                            income = uiState.totalIncome,
-                            expense = uiState.totalExpense,
-                            modifier = Modifier.padding(
-                                horizontal = Dimens.SpacingLg,
-                                vertical = Dimens.SpacingSm
-                            )
-                        )
-                    }
+                // Fixed: Balance Card
+                BalanceCard(
+                    balance = uiState.balance,
+                    income = uiState.totalIncome,
+                    expense = uiState.totalExpense,
+                    modifier = Modifier.padding(
+                        horizontal = Dimens.SpacingLg,
+                        vertical = Dimens.SpacingSm,
+                    ),
+                )
 
-                    if (uiState.items.isEmpty()) {
-                        item {
-                            TrackOneEmptyState(
-                                icon = Icons.Default.AccountBalanceWallet,
-                                title = "No transactions",
-                                subtitle = "No transactions found for this period",
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = Dimens.SpacingXxl),
-                            )
-                        }
-                    } else {
+                // Scrollable: Transactions list only
+                if (uiState.items.isEmpty()) {
+                    TrackOneEmptyState(
+                        icon = Icons.Default.AccountBalanceWallet,
+                        title = "No transactions",
+                        subtitle = "No transactions found for this period",
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = Dimens.SpacingXxl),
+                    )
+                } else {
+                    LazyColumn(
+                        contentPadding = PaddingValues(
+                            bottom = 80.dp,
+                        ),
+                        verticalArrangement = Arrangement.spacedBy(Dimens.SpacingSm),
+                        modifier = Modifier.weight(1f),
+                    ) {
                         items(uiState.items, key = { it.id }) { item ->
                             ExpenseItemCard(
                                 item = item,
-                                onEdit = { onEditItem(item) },
-                                onDelete = { itemToDelete = item },
-                                modifier = Modifier.padding(horizontal = Dimens.SpacingLg)
+                                onDoubleTap = { selectedItem = item },
+                                modifier = Modifier.padding(horizontal = Dimens.SpacingLg),
                             )
                         }
                     }
-
-                    // Bottom spacer for floating bar
-                    item {
-                        Spacer(modifier = Modifier.height(80.dp))
-                    }
                 }
             }
         }
     }
 
-    itemToDelete?.let { item ->
-        TrackOneDeleteDialog(
-            itemName = item.title,
-            onConfirm = {
-                onDeleteItem(item)
-                itemToDelete = null
+    // Long-press action popup
+    selectedItem?.let { item ->
+        AlertDialog(
+            onDismissRequest = { selectedItem = null },
+            title = {
+                Text(
+                    text = item.title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                )
             },
-            onDismiss = { itemToDelete = null },
-        )
-    }
-}
-
-/**
- * Day / Month / Year segmented toggle.
- */
-@Composable
-private fun TimePeriodToggle(
-    selectedPeriod: TimePeriod,
-    onPeriodSelected: (TimePeriod) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Surface(
-        modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(4.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly,
-        ) {
-            TimePeriod.entries.forEach { period ->
-                val isSelected = period == selectedPeriod
-                Surface(
-                    modifier = Modifier
-                        .weight(1f)
-                        .clip(RoundedCornerShape(10.dp))
-                        .clickable { onPeriodSelected(period) },
-                    shape = RoundedCornerShape(10.dp),
-                    color = if (isSelected)
-                        MaterialTheme.colorScheme.primary
-                    else
-                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0f),
-                ) {
-                    Text(
-                        text = period.label,
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                        color = if (isSelected)
-                            MaterialTheme.colorScheme.onPrimary
-                        else
-                            MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.padding(vertical = 10.dp),
+            text = {
+                Text(
+                    text = "${if (item.isIncome) "+" else "-"}${CurrencyUtils.formatAmount(item.amount)}",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = if (item.isIncome) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    onEditItem(item)
+                    selectedItem = null
+                }) {
+                    Icon(
+                        imageVector = Icons.Default.Edit,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                        tint = MaterialTheme.colorScheme.primary,
                     )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Edit")
                 }
-            }
-        }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    onDeleteItem(item)
+                    selectedItem = null
+                }) {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                        tint = MaterialTheme.colorScheme.error,
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Delete", color = MaterialTheme.colorScheme.error)
+                }
+            },
+        )
     }
 }
 
-/**
- * Left/Right arrow date navigator showing the current date label.
- */
-@Composable
-private fun DateNavigationRow(
-    dateLabel: String,
-    onPrevious: () -> Unit,
-    onNext: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Row(
-        modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        IconButton(onClick = onPrevious) {
-            Icon(
-                imageVector = Icons.Default.ChevronLeft,
-                contentDescription = "Previous",
-                tint = MaterialTheme.colorScheme.onSurface,
-            )
-        }
-        Text(
-            text = dateLabel,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.onSurface,
-        )
-        IconButton(onClick = onNext) {
-            Icon(
-                imageVector = Icons.Default.ChevronRight,
-                contentDescription = "Next",
-                tint = MaterialTheme.colorScheme.onSurface,
-            )
-        }
-    }
-}
+
 
 @Composable
 private fun BalanceCard(
@@ -353,94 +298,61 @@ private fun BalanceStat(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun ExpenseItemCard(
     item: ExpenseItem,
-    onEdit: () -> Unit,
-    onDelete: () -> Unit,
+    onDoubleTap: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    TrackOneCard(modifier = modifier) {
-        Column {
+    TrackOneCard(
+        modifier = modifier.combinedClickable(
+            onClick = {},
+            onDoubleClick = onDoubleTap,
+        ),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.weight(1f),
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.weight(1f),
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Circle,
-                        contentDescription = null,
-                        tint = if (item.isIncome) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
-                        modifier = Modifier.size(Dimens.IconSizeSm),
-                    )
-                    Spacer(modifier = Modifier.width(Dimens.SpacingSm))
-                    Column {
-                        Text(
-                            text = item.title,
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold,
-                        )
-                        Text(
-                            text = item.category.displayName,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                }
-                
-                Column(horizontalAlignment = Alignment.End) {
+                Icon(
+                    imageVector = if (item.isIncome) Icons.Default.ArrowUpward else Icons.Default.ArrowDownward,
+                    contentDescription = null,
+                    tint = if (item.isIncome) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
+                    modifier = Modifier.size(Dimens.IconSizeSm),
+                )
+                Spacer(modifier = Modifier.width(Dimens.SpacingSm))
+                Column {
                     Text(
-                        text = "${if (item.isIncome) "+" else "-"}${CurrencyUtils.formatAmount(item.amount)}",
+                        text = item.title,
                         style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = if (item.isIncome) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
+                        fontWeight = FontWeight.SemiBold,
                     )
                     Text(
-                        text = DateUtils.formatDate(item.date),
+                        text = item.paymentMode.displayName,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
             
-            if (!item.notes.isNullOrBlank()) {
-                Spacer(modifier = Modifier.height(Dimens.SpacingSm))
+            Column(horizontalAlignment = Alignment.End) {
                 Text(
-                    text = item.notes,
+                    text = "${if (item.isIncome) "+" else "-"}${CurrencyUtils.formatAmount(item.amount)}",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = if (item.isIncome) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
+                )
+                Text(
+                    text = DateUtils.formatDate(item.date),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-            }
-            
-            HorizontalDivider(
-                modifier = Modifier.padding(vertical = Dimens.SpacingSm),
-                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
-            )
-            
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End,
-            ) {
-                IconButton(onClick = onEdit, modifier = Modifier.size(32.dp)) {
-                    Icon(
-                        imageVector = Icons.Default.Edit,
-                        contentDescription = "Edit",
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(Dimens.IconSizeMd),
-                    )
-                }
-                IconButton(onClick = onDelete, modifier = Modifier.size(32.dp)) {
-                    Icon(
-                        imageVector = Icons.Default.Delete,
-                        contentDescription = "Delete",
-                        tint = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.size(Dimens.IconSizeMd),
-                    )
-                }
             }
         }
     }

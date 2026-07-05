@@ -26,7 +26,7 @@ import com.dev.trackone.feature.expiry.data.local.ExpiryEntity
         ExpenseEntity::class,
         CredentialEntity::class,
     ],
-    version = 3,
+    version = 4,
     exportSchema = false,
 )
 @TypeConverters(Converters::class)
