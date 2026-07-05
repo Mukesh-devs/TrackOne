@@ -4,6 +4,8 @@ import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -17,6 +19,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -100,7 +103,110 @@ fun ExpiryNavigation() {
                 )
             }
         },
-        bottomBar = {
+    ) { innerPadding ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding),
+        ) {
+            NavHost(
+                navController = navController,
+                startDestination = ExpiryRoutes.HOME,
+                modifier = Modifier.fillMaxSize(),
+                enterTransition = { fadeIn(tween(200)) },
+                exitTransition = { fadeOut(tween(200)) },
+            ) {
+                composable(ExpiryRoutes.HOME) {
+                    ExpiryHomeScreen(
+                        uiState = uiState,
+                        onGroupClick = { group ->
+                            viewModel.selectGroup(group)
+                            navController.navigate(ExpiryRoutes.DETAIL)
+                        },
+                        onSearchQueryChange = { viewModel.onSearchQueryChange(it) },
+                    )
+                }
+
+                composable(ExpiryRoutes.ADD) {
+                    ExpiryAddScreen(
+                        formState = formState,
+                        onNameChange = viewModel::updateFormName,
+                        onProviderChange = viewModel::updateFormProvider,
+                        onLabelChange = viewModel::updateFormLabel,
+                        onPurchasedDateChange = viewModel::updateFormPurchasedDate,
+                        onExpiryDateChange = viewModel::updateFormExpiryDate,
+                        onNotesChange = viewModel::updateFormNotes,
+                        onAmountChange = viewModel::updateFormAmount,
+                        onUsernameChange = viewModel::updateFormUsername,
+                        onEmailChange = viewModel::updateFormEmail,
+                        onPasswordChange = viewModel::updateFormPassword,
+                        onSave = viewModel::saveForm,
+                        onSaveSuccess = {
+                            viewModel.resetSaveSuccess()
+                            navController.navigate(ExpiryRoutes.HOME) {
+                                popUpTo(ExpiryRoutes.HOME) { inclusive = true }
+                            }
+                        },
+                    )
+                }
+
+                composable(ExpiryRoutes.EXPIRED) {
+                    ExpiryExpiredScreen(
+                        uiState = uiState,
+                        onGroupClick = { group ->
+                            viewModel.selectGroup(group)
+                            navController.navigate(ExpiryRoutes.DETAIL)
+                        },
+                    )
+                }
+
+                composable(ExpiryRoutes.SETTINGS) {
+                    // Placeholder settings screen
+                    com.dev.trackone.core.ui.component.TrackOneEmptyState(
+                        icon = Icons.Default.Settings,
+                        title = "Settings",
+                        subtitle = "Expiry module settings coming soon",
+                    )
+                }
+
+                composable(ExpiryRoutes.DETAIL) {
+                    uiState.selectedGroup?.let { group ->
+                        ExpiryDetailScreen(
+                            group = group,
+                            onEditItem = { item ->
+                                viewModel.initEditForm(item)
+                                navController.navigate(ExpiryRoutes.EDIT)
+                            },
+                            onDeleteItem = { item ->
+                                viewModel.deleteItem(item)
+                            },
+                        )
+                    }
+                }
+
+                composable(ExpiryRoutes.EDIT) {
+                    ExpiryAddScreen(
+                        formState = formState,
+                        onNameChange = viewModel::updateFormName,
+                        onProviderChange = viewModel::updateFormProvider,
+                        onLabelChange = viewModel::updateFormLabel,
+                        onPurchasedDateChange = viewModel::updateFormPurchasedDate,
+                        onExpiryDateChange = viewModel::updateFormExpiryDate,
+                        onNotesChange = viewModel::updateFormNotes,
+                        onAmountChange = viewModel::updateFormAmount,
+                        onUsernameChange = viewModel::updateFormUsername,
+                        onEmailChange = viewModel::updateFormEmail,
+                        onPasswordChange = viewModel::updateFormPassword,
+                        onSave = viewModel::saveForm,
+                        onSaveSuccess = {
+                            viewModel.resetSaveSuccess()
+                            navController.popBackStack()
+                        },
+                    )
+                }
+            }
+
+            // Floating bottom bar overlay — transparent behind the pill
             if (isOnMainScreen) {
                 TrackOneBottomBar(
                     items = expiryBottomNavItems,
@@ -116,103 +222,7 @@ fun ExpiryNavigation() {
                             }
                         }
                     },
-                )
-            }
-        },
-    ) { innerPadding ->
-        NavHost(
-            navController = navController,
-            startDestination = ExpiryRoutes.HOME,
-            modifier = Modifier.padding(innerPadding),
-            enterTransition = { fadeIn(tween(200)) },
-            exitTransition = { fadeOut(tween(200)) },
-        ) {
-            composable(ExpiryRoutes.HOME) {
-                ExpiryHomeScreen(
-                    uiState = uiState,
-                    onGroupClick = { group ->
-                        viewModel.selectGroup(group)
-                        navController.navigate(ExpiryRoutes.DETAIL)
-                    },
-                    onSearchQueryChange = { viewModel.onSearchQueryChange(it) },
-                )
-            }
-
-            composable(ExpiryRoutes.ADD) {
-                ExpiryAddScreen(
-                    formState = formState,
-                    onNameChange = viewModel::updateFormName,
-                    onProviderChange = viewModel::updateFormProvider,
-                    onLabelChange = viewModel::updateFormLabel,
-                    onPurchasedDateChange = viewModel::updateFormPurchasedDate,
-                    onExpiryDateChange = viewModel::updateFormExpiryDate,
-                    onNotesChange = viewModel::updateFormNotes,
-                    onAmountChange = viewModel::updateFormAmount,
-                    onUsernameChange = viewModel::updateFormUsername,
-                    onEmailChange = viewModel::updateFormEmail,
-                    onPasswordChange = viewModel::updateFormPassword,
-                    onSave = viewModel::saveForm,
-                    onSaveSuccess = {
-                        viewModel.resetSaveSuccess()
-                        navController.navigate(ExpiryRoutes.HOME) {
-                            popUpTo(ExpiryRoutes.HOME) { inclusive = true }
-                        }
-                    },
-                )
-            }
-
-            composable(ExpiryRoutes.EXPIRED) {
-                ExpiryExpiredScreen(
-                    uiState = uiState,
-                    onGroupClick = { group ->
-                        viewModel.selectGroup(group)
-                        navController.navigate(ExpiryRoutes.DETAIL)
-                    },
-                )
-            }
-
-            composable(ExpiryRoutes.SETTINGS) {
-                // Placeholder settings screen
-                com.dev.trackone.core.ui.component.TrackOneEmptyState(
-                    icon = Icons.Default.Settings,
-                    title = "Settings",
-                    subtitle = "Expiry module settings coming soon",
-                )
-            }
-
-            composable(ExpiryRoutes.DETAIL) {
-                uiState.selectedGroup?.let { group ->
-                    ExpiryDetailScreen(
-                        group = group,
-                        onEditItem = { item ->
-                            viewModel.initEditForm(item)
-                            navController.navigate(ExpiryRoutes.EDIT)
-                        },
-                        onDeleteItem = { item ->
-                            viewModel.deleteItem(item)
-                        },
-                    )
-                }
-            }
-
-            composable(ExpiryRoutes.EDIT) {
-                ExpiryAddScreen(
-                    formState = formState,
-                    onNameChange = viewModel::updateFormName,
-                    onProviderChange = viewModel::updateFormProvider,
-                    onLabelChange = viewModel::updateFormLabel,
-                    onPurchasedDateChange = viewModel::updateFormPurchasedDate,
-                    onExpiryDateChange = viewModel::updateFormExpiryDate,
-                    onNotesChange = viewModel::updateFormNotes,
-                    onAmountChange = viewModel::updateFormAmount,
-                    onUsernameChange = viewModel::updateFormUsername,
-                    onEmailChange = viewModel::updateFormEmail,
-                    onPasswordChange = viewModel::updateFormPassword,
-                    onSave = viewModel::saveForm,
-                    onSaveSuccess = {
-                        viewModel.resetSaveSuccess()
-                        navController.popBackStack()
-                    },
+                    modifier = Modifier.align(Alignment.BottomCenter),
                 )
             }
         }

@@ -3,6 +3,8 @@ package com.dev.trackone.feature.credential.navigation
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -15,6 +17,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -80,7 +83,88 @@ fun CredentialNavigation() {
                 )
             }
         },
-        bottomBar = {
+    ) { innerPadding ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding),
+        ) {
+            NavHost(
+                navController = navController,
+                startDestination = CredentialRoutes.HOME,
+                modifier = Modifier.fillMaxSize(),
+                enterTransition = { fadeIn(tween(200)) },
+                exitTransition = { fadeOut(tween(200)) },
+            ) {
+                composable(CredentialRoutes.HOME) {
+                    CredentialHomeScreen(
+                        uiState = uiState,
+                        onSearchQueryChange = { viewModel.onSearchQueryChange(it) },
+                        onCategoryFilterChange = { viewModel.setCategoryFilter(it) },
+                        onEditItem = { item ->
+                            viewModel.initEditForm(item)
+                            navController.navigate(CredentialRoutes.EDIT)
+                        },
+                        onDeleteItem = { item ->
+                            viewModel.deleteItem(item)
+                        },
+                        onToggleFavorite = { item ->
+                            viewModel.toggleFavorite(item)
+                        }
+                    )
+                }
+
+                composable(CredentialRoutes.ADD) {
+                    CredentialAddScreen(
+                        formState = formState,
+                        onTitleChange = viewModel::updateFormTitle,
+                        onUsernameChange = viewModel::updateFormUsername,
+                        onEmailChange = viewModel::updateFormEmail,
+                        onPasswordChange = viewModel::updateFormPassword,
+                        onUrlChange = viewModel::updateFormUrl,
+                        onCategoryChange = viewModel::updateFormCategory,
+                        onNotesChange = viewModel::updateFormNotes,
+                        onFavoriteChange = viewModel::updateFormFavorite,
+                        onSave = viewModel::saveForm,
+                        onSaveSuccess = {
+                            viewModel.resetSaveSuccess()
+                            navController.navigate(CredentialRoutes.HOME) {
+                                popUpTo(CredentialRoutes.HOME) { inclusive = true }
+                            }
+                        },
+                    )
+                }
+
+                composable(CredentialRoutes.SETTINGS) {
+                    // Placeholder settings screen
+                    com.dev.trackone.core.ui.component.TrackOneEmptyState(
+                        icon = Icons.Default.Settings,
+                        title = "Settings",
+                        subtitle = "Credential module settings coming soon (Biometrics & Encryption)",
+                    )
+                }
+
+                composable(CredentialRoutes.EDIT) {
+                    CredentialAddScreen(
+                        formState = formState,
+                        onTitleChange = viewModel::updateFormTitle,
+                        onUsernameChange = viewModel::updateFormUsername,
+                        onEmailChange = viewModel::updateFormEmail,
+                        onPasswordChange = viewModel::updateFormPassword,
+                        onUrlChange = viewModel::updateFormUrl,
+                        onCategoryChange = viewModel::updateFormCategory,
+                        onNotesChange = viewModel::updateFormNotes,
+                        onFavoriteChange = viewModel::updateFormFavorite,
+                        onSave = viewModel::saveForm,
+                        onSaveSuccess = {
+                            viewModel.resetSaveSuccess()
+                            navController.popBackStack()
+                        },
+                    )
+                }
+            }
+
+            // Floating bottom bar overlay — transparent behind the pill
             if (isOnMainScreen) {
                 TrackOneBottomBar(
                     items = credentialBottomNavItems,
@@ -96,81 +180,7 @@ fun CredentialNavigation() {
                             }
                         }
                     },
-                )
-            }
-        },
-    ) { innerPadding ->
-        NavHost(
-            navController = navController,
-            startDestination = CredentialRoutes.HOME,
-            modifier = Modifier.padding(innerPadding),
-            enterTransition = { fadeIn(tween(200)) },
-            exitTransition = { fadeOut(tween(200)) },
-        ) {
-            composable(CredentialRoutes.HOME) {
-                CredentialHomeScreen(
-                    uiState = uiState,
-                    onSearchQueryChange = { viewModel.onSearchQueryChange(it) },
-                    onCategoryFilterChange = { viewModel.setCategoryFilter(it) },
-                    onEditItem = { item ->
-                        viewModel.initEditForm(item)
-                        navController.navigate(CredentialRoutes.EDIT)
-                    },
-                    onDeleteItem = { item ->
-                        viewModel.deleteItem(item)
-                    },
-                    onToggleFavorite = { item ->
-                        viewModel.toggleFavorite(item)
-                    }
-                )
-            }
-
-            composable(CredentialRoutes.ADD) {
-                CredentialAddScreen(
-                    formState = formState,
-                    onTitleChange = viewModel::updateFormTitle,
-                    onUsernameChange = viewModel::updateFormUsername,
-                    onEmailChange = viewModel::updateFormEmail,
-                    onPasswordChange = viewModel::updateFormPassword,
-                    onUrlChange = viewModel::updateFormUrl,
-                    onCategoryChange = viewModel::updateFormCategory,
-                    onNotesChange = viewModel::updateFormNotes,
-                    onFavoriteChange = viewModel::updateFormFavorite,
-                    onSave = viewModel::saveForm,
-                    onSaveSuccess = {
-                        viewModel.resetSaveSuccess()
-                        navController.navigate(CredentialRoutes.HOME) {
-                            popUpTo(CredentialRoutes.HOME) { inclusive = true }
-                        }
-                    },
-                )
-            }
-
-            composable(CredentialRoutes.SETTINGS) {
-                // Placeholder settings screen
-                com.dev.trackone.core.ui.component.TrackOneEmptyState(
-                    icon = Icons.Default.Settings,
-                    title = "Settings",
-                    subtitle = "Credential module settings coming soon (Biometrics & Encryption)",
-                )
-            }
-
-            composable(CredentialRoutes.EDIT) {
-                CredentialAddScreen(
-                    formState = formState,
-                    onTitleChange = viewModel::updateFormTitle,
-                    onUsernameChange = viewModel::updateFormUsername,
-                    onEmailChange = viewModel::updateFormEmail,
-                    onPasswordChange = viewModel::updateFormPassword,
-                    onUrlChange = viewModel::updateFormUrl,
-                    onCategoryChange = viewModel::updateFormCategory,
-                    onNotesChange = viewModel::updateFormNotes,
-                    onFavoriteChange = viewModel::updateFormFavorite,
-                    onSave = viewModel::saveForm,
-                    onSaveSuccess = {
-                        viewModel.resetSaveSuccess()
-                        navController.popBackStack()
-                    },
+                    modifier = Modifier.align(Alignment.BottomCenter),
                 )
             }
         }

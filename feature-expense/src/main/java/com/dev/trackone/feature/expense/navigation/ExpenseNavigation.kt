@@ -3,6 +3,8 @@ package com.dev.trackone.feature.expense.navigation
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -16,6 +18,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -84,7 +87,90 @@ fun ExpenseNavigation() {
                 )
             }
         },
-        bottomBar = {
+    ) { innerPadding ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding),
+        ) {
+            NavHost(
+                navController = navController,
+                startDestination = ExpenseRoutes.HOME,
+                modifier = Modifier.fillMaxSize(),
+                enterTransition = { fadeIn(tween(200)) },
+                exitTransition = { fadeOut(tween(200)) },
+            ) {
+                composable(ExpenseRoutes.HOME) {
+                    ExpenseHomeScreen(
+                        uiState = uiState,
+                        onSearchQueryChange = { viewModel.onSearchQueryChange(it) },
+                        onCategoryFilterChange = { viewModel.setCategoryFilter(it) },
+                        onEditItem = { item ->
+                            viewModel.initEditForm(item)
+                            navController.navigate(ExpenseRoutes.EDIT)
+                        },
+                        onDeleteItem = { item ->
+                            viewModel.deleteItem(item)
+                        },
+                    )
+                }
+
+                composable(ExpenseRoutes.ADD) {
+                    ExpenseAddScreen(
+                        formState = formState,
+                        onTitleChange = viewModel::updateFormTitle,
+                        onAmountChange = viewModel::updateFormAmount,
+                        onTypeChange = viewModel::updateFormType,
+                        onCategoryChange = viewModel::updateFormCategory,
+                        onDateChange = viewModel::updateFormDate,
+                        onNotesChange = viewModel::updateFormNotes,
+                        onSave = viewModel::saveForm,
+                        onSaveSuccess = {
+                            viewModel.resetSaveSuccess()
+                            navController.navigate(ExpenseRoutes.HOME) {
+                                popUpTo(ExpenseRoutes.HOME) { inclusive = true }
+                            }
+                        },
+                    )
+                }
+                
+                composable(ExpenseRoutes.STATS) {
+                    // Placeholder stats screen
+                    com.dev.trackone.core.ui.component.TrackOneEmptyState(
+                        icon = Icons.Default.PieChart,
+                        title = "Statistics",
+                        subtitle = "Charts and statistics coming soon",
+                    )
+                }
+
+                composable(ExpenseRoutes.SETTINGS) {
+                    // Placeholder settings screen
+                    com.dev.trackone.core.ui.component.TrackOneEmptyState(
+                        icon = Icons.Default.Settings,
+                        title = "Settings",
+                        subtitle = "Expense module settings coming soon",
+                    )
+                }
+
+                composable(ExpenseRoutes.EDIT) {
+                    ExpenseAddScreen(
+                        formState = formState,
+                        onTitleChange = viewModel::updateFormTitle,
+                        onAmountChange = viewModel::updateFormAmount,
+                        onTypeChange = viewModel::updateFormType,
+                        onCategoryChange = viewModel::updateFormCategory,
+                        onDateChange = viewModel::updateFormDate,
+                        onNotesChange = viewModel::updateFormNotes,
+                        onSave = viewModel::saveForm,
+                        onSaveSuccess = {
+                            viewModel.resetSaveSuccess()
+                            navController.popBackStack()
+                        },
+                    )
+                }
+            }
+
+            // Floating bottom bar overlay — transparent behind the pill
             if (isOnMainScreen) {
                 TrackOneBottomBar(
                     items = expenseBottomNavItems,
@@ -100,83 +186,7 @@ fun ExpenseNavigation() {
                             }
                         }
                     },
-                )
-            }
-        },
-    ) { innerPadding ->
-        NavHost(
-            navController = navController,
-            startDestination = ExpenseRoutes.HOME,
-            modifier = Modifier.padding(innerPadding),
-            enterTransition = { fadeIn(tween(200)) },
-            exitTransition = { fadeOut(tween(200)) },
-        ) {
-            composable(ExpenseRoutes.HOME) {
-                ExpenseHomeScreen(
-                    uiState = uiState,
-                    onSearchQueryChange = { viewModel.onSearchQueryChange(it) },
-                    onCategoryFilterChange = { viewModel.setCategoryFilter(it) },
-                    onEditItem = { item ->
-                        viewModel.initEditForm(item)
-                        navController.navigate(ExpenseRoutes.EDIT)
-                    },
-                    onDeleteItem = { item ->
-                        viewModel.deleteItem(item)
-                    },
-                )
-            }
-
-            composable(ExpenseRoutes.ADD) {
-                ExpenseAddScreen(
-                    formState = formState,
-                    onTitleChange = viewModel::updateFormTitle,
-                    onAmountChange = viewModel::updateFormAmount,
-                    onTypeChange = viewModel::updateFormType,
-                    onCategoryChange = viewModel::updateFormCategory,
-                    onDateChange = viewModel::updateFormDate,
-                    onNotesChange = viewModel::updateFormNotes,
-                    onSave = viewModel::saveForm,
-                    onSaveSuccess = {
-                        viewModel.resetSaveSuccess()
-                        navController.navigate(ExpenseRoutes.HOME) {
-                            popUpTo(ExpenseRoutes.HOME) { inclusive = true }
-                        }
-                    },
-                )
-            }
-            
-            composable(ExpenseRoutes.STATS) {
-                // Placeholder stats screen
-                com.dev.trackone.core.ui.component.TrackOneEmptyState(
-                    icon = Icons.Default.PieChart,
-                    title = "Statistics",
-                    subtitle = "Charts and statistics coming soon",
-                )
-            }
-
-            composable(ExpenseRoutes.SETTINGS) {
-                // Placeholder settings screen
-                com.dev.trackone.core.ui.component.TrackOneEmptyState(
-                    icon = Icons.Default.Settings,
-                    title = "Settings",
-                    subtitle = "Expense module settings coming soon",
-                )
-            }
-
-            composable(ExpenseRoutes.EDIT) {
-                ExpenseAddScreen(
-                    formState = formState,
-                    onTitleChange = viewModel::updateFormTitle,
-                    onAmountChange = viewModel::updateFormAmount,
-                    onTypeChange = viewModel::updateFormType,
-                    onCategoryChange = viewModel::updateFormCategory,
-                    onDateChange = viewModel::updateFormDate,
-                    onNotesChange = viewModel::updateFormNotes,
-                    onSave = viewModel::saveForm,
-                    onSaveSuccess = {
-                        viewModel.resetSaveSuccess()
-                        navController.popBackStack()
-                    },
+                    modifier = Modifier.align(Alignment.BottomCenter),
                 )
             }
         }
