@@ -14,29 +14,38 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.dev.trackone.core.ui.component.BottomNavItem
 import com.dev.trackone.core.ui.component.TrackOneBottomBar
 import com.dev.trackone.core.ui.component.TrackOneTopBar
 import com.dev.trackone.feature.credential.presentation.CredentialViewModel
 import com.dev.trackone.feature.credential.presentation.screen.CredentialAddScreen
+import com.dev.trackone.feature.credential.presentation.screen.CredentialDetailsScreen
 import com.dev.trackone.feature.credential.presentation.screen.CredentialHomeScreen
+import java.net.URLDecoder
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
 
 object CredentialRoutes {
     const val HOME = "credential_home"
     const val ADD = "credential_add"
     const val SETTINGS = "credential_settings"
     const val EDIT = "credential_edit"
+    const val DETAILS = "credential_details/{title}"
+    
+    fun createDetailsRoute(title: String): String {
+        val encodedTitle = URLEncoder.encode(title, StandardCharsets.UTF_8.toString())
+        return "credential_details/$encodedTitle"
+    }
 }
 
 private val credentialBottomNavItems = listOf(
@@ -74,8 +83,16 @@ fun CredentialNavigation() {
                     onSearchClick = { viewModel.toggleSearch() },
                 )
             } else {
+                val title = when (currentRoute) {
+                    CredentialRoutes.EDIT -> "Edit Credential"
+                    CredentialRoutes.DETAILS -> {
+                        val argTitle = navBackStackEntry?.arguments?.getString("title") ?: "Details"
+                        URLDecoder.decode(argTitle, StandardCharsets.UTF_8.toString())
+                    }
+                    else -> "Details"
+                }
                 TrackOneTopBar(
-                    title = "Edit Credential",
+                    title = title,
                     showBackButton = true,
                     onBackClick = {
                         navController.popBackStack()
@@ -101,15 +118,30 @@ fun CredentialNavigation() {
                         uiState = uiState,
                         onSearchQueryChange = { viewModel.onSearchQueryChange(it) },
                         onCategoryFilterChange = { viewModel.setCategoryFilter(it) },
+                        onGroupClick = { title ->
+                            navController.navigate(CredentialRoutes.createDetailsRoute(title))
+                        }
+                    )
+                }
+                
+                composable(
+                    route = CredentialRoutes.DETAILS,
+                    arguments = listOf(navArgument("title") { type = NavType.StringType })
+                ) { backStackEntry ->
+                    val encodedTitle = backStackEntry.arguments?.getString("title") ?: ""
+                    val groupTitle = URLDecoder.decode(encodedTitle, StandardCharsets.UTF_8.toString())
+                    
+                    CredentialDetailsScreen(
+                        groupTitle = groupTitle,
+                        uiState = uiState,
                         onEditItem = { item ->
                             viewModel.initEditForm(item)
                             navController.navigate(CredentialRoutes.EDIT)
                         },
                         onDeleteItem = { item ->
                             viewModel.deleteItem(item)
-                        },
-                        onToggleFavorite = { item ->
-                            viewModel.toggleFavorite(item)
+                            // If it was the last item for this title, we should probably go back, 
+                            // but UI state will handle the empty list gracefully or we could pop back automatically.
                         }
                     )
                 }
