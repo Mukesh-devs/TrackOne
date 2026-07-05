@@ -56,7 +56,7 @@ fun ExpiryExpiredScreen(
                     items = expiredGroups,
                     key = { it.name },
                 ) { group ->
-                    ExpiredItemCard(group = group, onClick = { onGroupClick(group) })
+                    ExpiryGroupCard(group = group, onClick = { onGroupClick(group) })
                 }
 
                 // Bottom spacer for floating bar
@@ -68,49 +68,3 @@ fun ExpiryExpiredScreen(
     }
 }
 
-@Composable
-private fun ExpiredItemCard(
-    group: ExpiryGroup,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    // Reuses the same card style as home screen but with expired styling
-    androidx.compose.foundation.layout.Row(modifier = modifier) {
-        com.dev.trackone.core.ui.component.TrackOneCard(onClick = onClick) {
-            androidx.compose.foundation.layout.Row(
-                modifier = Modifier.fillMaxSize(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
-            ) {
-                androidx.compose.foundation.layout.Column(modifier = Modifier.weight(1f)) {
-                    androidx.compose.material3.Text(
-                        text = group.name,
-                        style = androidx.compose.material3.MaterialTheme.typography.titleMedium,
-                        color = androidx.compose.material3.MaterialTheme.colorScheme.error,
-                    )
-                    if (group.hasMultiple) {
-                        androidx.compose.material3.Text(
-                            text = "${group.itemCount} items expired",
-                            style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
-                            color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    } else {
-                        val item = group.items.first()
-                        androidx.compose.material3.Text(
-                            text = com.dev.trackone.core.common.util.DateUtils.getExpiryLabel(item.expiryDate),
-                            style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
-                            color = androidx.compose.material3.MaterialTheme.colorScheme.error.copy(alpha = 0.7f),
-                        )
-                    }
-                }
-                if (group.totalAmount > 0) {
-                    androidx.compose.material3.Text(
-                        text = com.dev.trackone.core.common.util.CurrencyUtils.formatAmount(group.totalAmount),
-                        style = androidx.compose.material3.MaterialTheme.typography.titleSmall,
-                        color = androidx.compose.material3.MaterialTheme.colorScheme.error,
-                    )
-                }
-            }
-        }
-    }
-}

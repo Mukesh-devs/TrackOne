@@ -117,7 +117,7 @@ fun ExpiryHomeScreen(
 }
 
 @Composable
-private fun ExpiryGroupCard(
+fun ExpiryGroupCard(
     group: ExpiryGroup,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
