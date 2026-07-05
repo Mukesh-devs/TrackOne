@@ -21,6 +21,17 @@ import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.ui.Alignment
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.background
 
 /**
  * Reusable top app bar with optional back navigation, search, and actions.
@@ -41,44 +52,61 @@ fun TrackOneTopBar(
     ),
     actions: @Composable RowScope.() -> Unit = {},
 ) {
-    CenterAlignedTopAppBar(
-        title = {
-            AnimatedVisibility(
-                visible = true,
-                enter = fadeIn() + slideInVertically(),
-                exit = fadeOut() + slideOutVertically(),
-            ) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleLarge,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-        },
-        modifier = modifier,
-        navigationIcon = {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(48.dp)
+            .background(colors.containerColor)
+            .padding(horizontal = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Navigation Icon
+        Box(
+            modifier = Modifier.width(48.dp),
+            contentAlignment = Alignment.Center
+        ) {
             if (showBackButton) {
                 IconButton(onClick = onBackClick) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "Back",
+                        tint = colors.navigationIconContentColor
                     )
                 }
             }
-        },
-        actions = {
+        }
+
+        // Title
+        Box(
+            modifier = Modifier.weight(1f),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                color = colors.titleContentColor,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+
+        // Actions
+        Row(
+            modifier = Modifier.widthIn(min = 48.dp),
+            horizontalArrangement = Arrangement.End,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             if (showSearchIcon) {
                 IconButton(onClick = onSearchClick) {
                     Icon(
                         imageVector = Icons.Default.Search,
                         contentDescription = "Search",
+                        tint = colors.actionIconContentColor
                     )
                 }
             }
             actions()
-        },
-        scrollBehavior = scrollBehavior,
-        colors = colors,
-    )
+        }
+    }
 }
+

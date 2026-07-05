@@ -122,7 +122,7 @@ private fun ModuleIndicator(
     Column(
         modifier = modifier
             .background(MaterialTheme.colorScheme.surface)
-            .padding(top = Dimens.SpacingLg, bottom = Dimens.SpacingSm),
+            .padding(top = Dimens.SpacingSm, bottom = Dimens.SpacingSm), // Reduced top padding
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         // Current module title and icon
@@ -153,7 +153,7 @@ private fun ModuleIndicator(
             }
         }
 
-        Spacer(modifier = Modifier.height(Dimens.SpacingSm))
+        Spacer(modifier = Modifier.height(2.dp)) // Drastically reduced spacer height
 
         // Page indicator dots
         Row(
