@@ -3,6 +3,8 @@ package com.dev.trackone.feature.credential.presentation.screen
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -158,7 +160,16 @@ private fun CredentialGroupCard(
     modifier: Modifier = Modifier,
 ) {
     TrackOneCard(
-        modifier = modifier.clickable { onClick() }
+        modifier = modifier
+            .shadow(
+                elevation = 8.dp,
+                shape = MaterialTheme.shapes.large,
+                ambientColor = Color.Black.copy(alpha = 0.1f),
+                spotColor = Color.Black.copy(alpha = 0.1f)
+            )
+            .clickable { onClick() },
+        containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f),
+        elevation = 0.dp
     ) {
         Row(
             modifier = Modifier
