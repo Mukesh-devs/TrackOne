@@ -23,6 +23,7 @@ fun TrackOneCard(
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
     containerColor: androidx.compose.ui.graphics.Color? = null,
+    elevation: androidx.compose.ui.unit.Dp = Dimens.CardElevation,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     if (onClick != null) {
@@ -41,7 +42,7 @@ fun TrackOneCard(
                 containerColor = containerColor ?: MaterialTheme.colorScheme.surfaceVariant,
             ),
             elevation = CardDefaults.cardElevation(
-                defaultElevation = Dimens.CardElevation,
+                defaultElevation = elevation,
             ),
         ) {
             Column(
@@ -64,7 +65,7 @@ fun TrackOneCard(
                 containerColor = containerColor ?: MaterialTheme.colorScheme.surfaceVariant,
             ),
             elevation = CardDefaults.cardElevation(
-                defaultElevation = Dimens.CardElevation,
+                defaultElevation = elevation,
             ),
         ) {
             Column(

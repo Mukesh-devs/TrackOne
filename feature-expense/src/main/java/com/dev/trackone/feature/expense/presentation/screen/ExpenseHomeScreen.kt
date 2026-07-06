@@ -310,6 +310,7 @@ private fun ExpenseItemCard(
             onClick = {},
             onDoubleClick = onDoubleTap,
         ),
+        elevation = 4.dp,
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),

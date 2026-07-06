@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -27,7 +28,19 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.ModalDrawerSheet
+import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.NavigationDrawerItem
+import androidx.compose.material3.rememberDrawerState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.outlined.Cloud
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.snapshotFlow
@@ -75,25 +88,90 @@ fun TrackOneApp(
         }
     }
 
-    Scaffold(
-        containerColor = MaterialTheme.colorScheme.background,
-    ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding),
-        ) {
-            // Module indicator header
-            val currentModuleTitle = if (pagerState.currentPage in modules.indices) modules[pagerState.currentPage].title else ""
-            com.dev.trackone.core.ui.theme.DynamicModuleTheme(moduleTitle = currentModuleTitle) {
-                ModuleIndicator(
-                    modules = modules,
-                    currentPage = pagerState.currentPage,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
+    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
+    val coroutineScope = rememberCoroutineScope()
 
-            // Module pages
+    val currentModuleTitle = if (pagerState.currentPage in modules.indices) modules[pagerState.currentPage].title else ""
+    
+    ModalNavigationDrawer(
+        drawerState = drawerState,
+        drawerContent = {
+            com.dev.trackone.core.ui.theme.DynamicModuleTheme(moduleTitle = currentModuleTitle) {
+                ModalDrawerSheet(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .width(280.dp),
+                drawerShape = androidx.compose.foundation.shape.RoundedCornerShape(topEnd = 32.dp, bottomEnd = 32.dp),
+                drawerContainerColor = androidx.compose.ui.graphics.Color.White,
+                drawerTonalElevation = 4.dp
+            ) {
+                Spacer(modifier = Modifier.height(32.dp))
+                Row(
+                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        "TrackOne",
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                        color = androidx.compose.ui.graphics.Color.Black
+                    )
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                modules.forEachIndexed { index, module ->
+                    val isSelected = pagerState.currentPage == index
+                    NavigationDrawerItem(
+                        label = { 
+                            Text(
+                                text = module.title,
+                                fontWeight = if (isSelected) androidx.compose.ui.text.font.FontWeight.Bold else androidx.compose.ui.text.font.FontWeight.Medium
+                            ) 
+                        },
+                        selected = isSelected,
+                        icon = { Icon(module.icon, contentDescription = null) },
+                        onClick = {
+                            coroutineScope.launch {
+                                drawerState.close()
+                                pagerState.animateScrollToPage(index)
+                            }
+                        },
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
+                        colors = androidx.compose.material3.NavigationDrawerItemDefaults.colors(
+                            selectedContainerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
+                            selectedIconColor = MaterialTheme.colorScheme.primary,
+                            selectedTextColor = MaterialTheme.colorScheme.primary,
+                            unselectedContainerColor = androidx.compose.ui.graphics.Color.Transparent,
+                            unselectedIconColor = androidx.compose.ui.graphics.Color.Black,
+                            unselectedTextColor = androidx.compose.ui.graphics.Color.Black,
+                        ),
+                        shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp)
+                    )
+                }
+            }
+            }
+        }
+    ) {
+        Scaffold(
+            containerColor = MaterialTheme.colorScheme.background,
+        ) { innerPadding ->
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding),
+            ) {
+            // Module indicator header
+                com.dev.trackone.core.ui.theme.DynamicModuleTheme(moduleTitle = currentModuleTitle) {
+                    ModuleIndicator(
+                        modules = modules,
+                        currentPage = pagerState.currentPage,
+                        onMenuClick = { coroutineScope.launch { drawerState.open() } },
+                        onCloudClick = { /* Will implement in future */ },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+
+                // Module pages
             HorizontalPager(
                 state = pagerState,
                 modifier = Modifier
@@ -109,10 +187,10 @@ fun TrackOneApp(
                     modules[pageIndex].Content()
                 }
             }
+            }
         }
     }
 }
-
 /**
  * Module indicator showing the current module with icon, title, and page dots.
  */
@@ -120,6 +198,8 @@ fun TrackOneApp(
 private fun ModuleIndicator(
     modules: List<com.dev.trackone.core.navigation.ModuleEntry>,
     currentPage: Int,
+    onMenuClick: () -> Unit,
+    onCloudClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -128,7 +208,21 @@ private fun ModuleIndicator(
             .padding(top = Dimens.SpacingSm, bottom = Dimens.SpacingSm), // Reduced top padding
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        // Current module title and icon
+        // Top row with Menu, Title/Icon, Cloud
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(onClick = onMenuClick) {
+                Icon(
+                    imageVector = Icons.Default.Menu,
+                    contentDescription = "Menu",
+                    tint = MaterialTheme.colorScheme.onSurface
+                )
+            }
+
+            // Current module title and icon
         AnimatedVisibility(
             visible = true,
             enter = fadeIn(),
@@ -154,7 +248,16 @@ private fun ModuleIndicator(
                     )
                 }
             }
-        }
+        } // Close AnimatedVisibility
+            
+            IconButton(onClick = onCloudClick) {
+                Icon(
+                    imageVector = Icons.Outlined.Cloud,
+                    contentDescription = "Cloud Sync",
+                    tint = MaterialTheme.colorScheme.onSurface
+                )
+            }
+        } // Close outer Row
 
         Spacer(modifier = Modifier.height(2.dp)) // Drastically reduced spacer height
 

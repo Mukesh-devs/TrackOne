@@ -69,7 +69,7 @@ fun CredentialModuleTheme(content: @Composable () -> Unit) {
 private val ExpenseOrange = Color(0xFFE8710A)
 private val ExpenseOrangeDark = Color(0xFFC25E09)
 private val ExpenseOrangeLight = Color(0xFFFEF0E1)
-private val ExpenseOrangeSurface = Color(0xFFFFF8F0)
+private val ExpenseOrangeSurface = Color(0xFFFFEBE0)
 
 // Semantic: Income green, Expense red — matching the orange page
 private val ExpenseIncomeGreen = Color(0xFF188038)
