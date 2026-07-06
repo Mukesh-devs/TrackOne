@@ -63,6 +63,7 @@ fun ExpenseNavigation() {
         ExpenseRoutes.HOME, ExpenseRoutes.ADD, ExpenseRoutes.STATS, ExpenseRoutes.SETTINGS
     )
 
+    com.dev.trackone.core.ui.theme.ExpenseModuleTheme {
     Scaffold(
         topBar = {
             if (isOnMainScreen) {
@@ -195,5 +196,6 @@ fun ExpenseNavigation() {
                 )
             }
         }
+    }
     }
 }

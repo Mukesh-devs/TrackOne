@@ -172,7 +172,7 @@ fun ExpenseHomeScreen(
                 Text(
                     text = "${if (item.isIncome) "+" else "-"}${CurrencyUtils.formatAmount(item.amount)}",
                     style = MaterialTheme.typography.bodyLarge,
-                    color = if (item.isIncome) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
+                    color = if (item.isIncome) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.error,
                 )
             },
             confirmButton = {
@@ -233,7 +233,7 @@ private fun BalanceCard(
                 text = CurrencyUtils.formatAmount(balance),
                 style = MaterialTheme.typography.headlineLarge,
                 fontWeight = FontWeight.Bold,
-                color = if (balance >= 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
+                color = if (balance >= 0) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.error,
             )
             
             Spacer(modifier = Modifier.height(Dimens.SpacingLg))
@@ -246,7 +246,7 @@ private fun BalanceCard(
                     label = "Income",
                     amount = income,
                     icon = Icons.Default.ArrowUpward,
-                    color = MaterialTheme.colorScheme.primary,
+                    color = MaterialTheme.colorScheme.tertiary,
                 )
                 
                 Box(
@@ -323,7 +323,7 @@ private fun ExpenseItemCard(
                 Icon(
                     imageVector = if (item.isIncome) Icons.Default.ArrowUpward else Icons.Default.ArrowDownward,
                     contentDescription = null,
-                    tint = if (item.isIncome) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
+                    tint = if (item.isIncome) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.error,
                     modifier = Modifier.size(Dimens.IconSizeSm),
                 )
                 Spacer(modifier = Modifier.width(Dimens.SpacingSm))
@@ -346,7 +346,7 @@ private fun ExpenseItemCard(
                     text = "${if (item.isIncome) "+" else "-"}${CurrencyUtils.formatAmount(item.amount)}",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = if (item.isIncome) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
+                    color = if (item.isIncome) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.error,
                 )
                 Text(
                     text = DateUtils.formatDate(item.date),

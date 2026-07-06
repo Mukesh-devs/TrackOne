@@ -117,7 +117,7 @@ fun ExpenseStatsScreen(
                             Icon(
                                 imageVector = Icons.Default.ArrowUpward,
                                 contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
+                                tint = MaterialTheme.colorScheme.tertiary,
                                 modifier = Modifier.size(Dimens.IconSizeSm)
                             )
                             Spacer(modifier = Modifier.width(Dimens.SpacingXs))
@@ -131,7 +131,7 @@ fun ExpenseStatsScreen(
                             text = CurrencyUtils.formatAmount(uiState.statsTotalIncome),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
+                            color = MaterialTheme.colorScheme.tertiary
                         )
                     }
     
@@ -314,7 +314,7 @@ fun ExpenseStatsScreen(
             verticalArrangement = Arrangement.spacedBy(Dimens.SpacingSm)
         ) {
             Row(modifier = Modifier.fillMaxWidth().weight(1f), horizontalArrangement = Arrangement.spacedBy(Dimens.SpacingSm)) {
-                CompactStatBox("Total Credits", uiState.totalIncome, Icons.Default.ArrowUpward, MaterialTheme.colorScheme.primary, Modifier.weight(1f))
+                CompactStatBox("Total Credits", uiState.totalIncome, Icons.Default.ArrowUpward, MaterialTheme.colorScheme.tertiary, Modifier.weight(1f))
                 CompactStatBox("Total Expense", uiState.totalExpense, Icons.Default.ArrowDownward, MaterialTheme.colorScheme.error, Modifier.weight(1f))
             }
             Row(modifier = Modifier.fillMaxWidth().weight(1f), horizontalArrangement = Arrangement.spacedBy(Dimens.SpacingSm)) {

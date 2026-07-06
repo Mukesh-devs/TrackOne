@@ -46,17 +46,21 @@ fun TrackOneTopBar(
     showSearchIcon: Boolean = false,
     onSearchClick: () -> Unit = {},
     scrollBehavior: TopAppBarScrollBehavior? = null,
-    colors: TopAppBarColors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-        containerColor = MaterialTheme.colorScheme.surface,
-        titleContentColor = MaterialTheme.colorScheme.onSurface,
-    ),
+    colors: TopAppBarColors? = null,
     actions: @Composable RowScope.() -> Unit = {},
 ) {
+    val resolvedColors = colors ?: TopAppBarDefaults.centerAlignedTopAppBarColors(
+        containerColor = MaterialTheme.colorScheme.background,
+        titleContentColor = MaterialTheme.colorScheme.primary,
+        actionIconContentColor = MaterialTheme.colorScheme.primary,
+        navigationIconContentColor = MaterialTheme.colorScheme.primary,
+    )
+
     Row(
         modifier = modifier
             .fillMaxWidth()
             .height(48.dp)
-            .background(colors.containerColor)
+            .background(resolvedColors.containerColor)
             .padding(horizontal = 4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -70,7 +74,7 @@ fun TrackOneTopBar(
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "Back",
-                        tint = colors.navigationIconContentColor
+                        tint = resolvedColors.navigationIconContentColor
                     )
                 }
             }
@@ -84,7 +88,7 @@ fun TrackOneTopBar(
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleMedium,
-                color = colors.titleContentColor,
+                color = resolvedColors.titleContentColor,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -101,7 +105,7 @@ fun TrackOneTopBar(
                     Icon(
                         imageVector = Icons.Default.Search,
                         contentDescription = "Search",
-                        tint = colors.actionIconContentColor
+                        tint = resolvedColors.actionIconContentColor
                     )
                 }
             }

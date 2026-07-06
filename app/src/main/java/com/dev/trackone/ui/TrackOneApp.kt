@@ -84,11 +84,14 @@ fun TrackOneApp(
                 .padding(innerPadding),
         ) {
             // Module indicator header
-            ModuleIndicator(
-                modules = modules,
-                currentPage = pagerState.currentPage,
-                modifier = Modifier.fillMaxWidth(),
-            )
+            val currentModuleTitle = if (pagerState.currentPage in modules.indices) modules[pagerState.currentPage].title else ""
+            com.dev.trackone.core.ui.theme.DynamicModuleTheme(moduleTitle = currentModuleTitle) {
+                ModuleIndicator(
+                    modules = modules,
+                    currentPage = pagerState.currentPage,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
 
             // Module pages
             HorizontalPager(

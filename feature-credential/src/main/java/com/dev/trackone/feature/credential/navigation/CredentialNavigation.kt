@@ -69,6 +69,7 @@ fun CredentialNavigation() {
         CredentialRoutes.HOME, CredentialRoutes.ADD, CredentialRoutes.SETTINGS
     )
 
+    com.dev.trackone.core.ui.theme.CredentialModuleTheme {
     Scaffold(
         topBar = {
             if (isOnMainScreen) {
@@ -216,5 +217,6 @@ fun CredentialNavigation() {
                 )
             }
         }
+    }
     }
 }

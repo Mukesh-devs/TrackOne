@@ -22,6 +22,7 @@ import com.dev.trackone.core.ui.theme.Dimens
 fun TrackOneCard(
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
+    containerColor: androidx.compose.ui.graphics.Color? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     if (onClick != null) {
@@ -37,7 +38,7 @@ fun TrackOneCard(
                 ),
             shape = MaterialTheme.shapes.large,
             colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                containerColor = containerColor ?: MaterialTheme.colorScheme.surfaceVariant,
             ),
             elevation = CardDefaults.cardElevation(
                 defaultElevation = Dimens.CardElevation,
@@ -60,7 +61,7 @@ fun TrackOneCard(
                 ),
             shape = MaterialTheme.shapes.large,
             colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                containerColor = containerColor ?: MaterialTheme.colorScheme.surfaceVariant,
             ),
             elevation = CardDefaults.cardElevation(
                 defaultElevation = Dimens.CardElevation,

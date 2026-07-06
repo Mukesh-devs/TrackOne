@@ -149,9 +149,17 @@ fun ExpiryGroupCard(
         label = "progress"
     )
 
+    val cardBackgroundColor = if (isExpired) 
+        androidx.compose.ui.graphics.Color(0xFFFFEBEE) // Solid soft red
+    else 
+        androidx.compose.ui.graphics.Color(0xFFE8F5E9) // Solid soft green
+    
+    val cardTextColor = if (isExpired) androidx.compose.ui.graphics.Color(0xFFB71C1C) else androidx.compose.ui.graphics.Color(0xFF1B5E20)
+
     TrackOneCard(
         onClick = onClick,
         modifier = modifier,
+        containerColor = cardBackgroundColor,
     ) {
         Column(
             modifier = Modifier.fillMaxWidth()
@@ -168,6 +176,7 @@ fun ExpiryGroupCard(
                         text = group.name,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold,
+                        color = cardTextColor,
                     )
                     if (group.hasMultiple) {
                         Spacer(modifier = Modifier.width(Dimens.SpacingSm))
@@ -189,7 +198,7 @@ fun ExpiryGroupCard(
                         text = CurrencyUtils.formatAmount(group.totalAmount),
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary,
+                        color = cardTextColor,
                     )
                 }
             }
@@ -208,7 +217,7 @@ fun ExpiryGroupCard(
                 Text(
                     text = "$purchasedStr  →  $expiryStr",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = cardTextColor.copy(alpha = 0.8f),
                     letterSpacing = 0.2.sp
                 )
 

@@ -77,6 +77,7 @@ fun ExpiryNavigation() {
         ExpiryRoutes.HOME, ExpiryRoutes.ADD, ExpiryRoutes.EXPIRED, ExpiryRoutes.SETTINGS
     )
 
+    com.dev.trackone.core.ui.theme.ExpiryModuleTheme {
     Scaffold(
         topBar = {
             if (isOnMainScreen) {
@@ -226,5 +227,6 @@ fun ExpiryNavigation() {
                 )
             }
         }
+    }
     }
 }
