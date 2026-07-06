@@ -6,6 +6,8 @@ import com.dev.trackone.feature.expiry.domain.model.ExpiryGroup
 import com.dev.trackone.feature.expiry.domain.model.ExpiryItem
 import com.dev.trackone.feature.expiry.domain.repository.ExpiryRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
+import android.content.Context
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -18,10 +20,17 @@ import javax.inject.Inject
 @HiltViewModel
 class ExpiryViewModel @Inject constructor(
     private val repository: ExpiryRepository,
+    @ApplicationContext private val context: Context,
 ) : ViewModel() {
+
+    private val prefs = context.getSharedPreferences("expiry_prefs", Context.MODE_PRIVATE)
 
     private val _uiState = MutableStateFlow(ExpiryUiState())
     val uiState: StateFlow<ExpiryUiState> = _uiState.asStateFlow()
+
+    private val _dismissedGroups = MutableStateFlow<Set<String>>(
+        prefs.getStringSet("dismissed_groups", emptySet()) ?: emptySet()
+    )
 
     private val _formState = MutableStateFlow(ExpiryFormState())
     val formState: StateFlow<ExpiryFormState> = _formState.asStateFlow()
@@ -36,10 +45,12 @@ class ExpiryViewModel @Inject constructor(
                 repository.getAll(),
                 repository.getExpired(),
                 repository.getAllProviders(),
-            ) { all, expired, providers ->
+                _dismissedGroups,
+            ) { all, expired, providers, dismissed ->
                 val groups = all.groupBy { it.provider }
                     .map { (provider, items) -> ExpiryGroup(name = provider, items = items) }
-                    .sortedBy { it.nearestExpiry ?: Long.MAX_VALUE }
+                    .filter { it.name !in dismissed }
+                    .sortedBy { group -> group.items.minOf { it.expiryDate } }
 
                 _uiState.update { state ->
                     state.copy(
@@ -109,6 +120,14 @@ class ExpiryViewModel @Inject constructor(
     }
 
     // ========== CRUD ==========
+
+    fun dismissGroupFromHome(groupName: String) {
+        _dismissedGroups.update { current ->
+            val newSet = current + groupName
+            prefs.edit().putStringSet("dismissed_groups", newSet).apply()
+            newSet
+        }
+    }
 
     fun deleteItem(item: ExpiryItem) {
         viewModelScope.launch {

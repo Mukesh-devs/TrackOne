@@ -169,11 +169,9 @@ fun CredentialNavigation() {
                 }
 
                 composable(CredentialRoutes.SETTINGS) {
-                    // Placeholder settings screen
-                    com.dev.trackone.core.ui.component.TrackOneEmptyState(
-                        icon = Icons.Default.Settings,
-                        title = "Settings",
-                        subtitle = "Credential module settings coming soon (Biometrics & Encryption)",
+                    val context = androidx.compose.ui.platform.LocalContext.current
+                    com.dev.trackone.feature.credential.presentation.screen.CredentialSettingsScreen(
+                        onExportCsv = { uri -> viewModel.exportCsv(uri, context) }
                     )
                 }
 

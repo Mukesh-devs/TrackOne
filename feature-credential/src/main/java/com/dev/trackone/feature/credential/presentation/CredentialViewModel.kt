@@ -109,6 +109,41 @@ class CredentialViewModel @Inject constructor(
             repository.delete(item)
         }
     }
+    
+    fun exportCsv(uri: android.net.Uri, context: android.content.Context) {
+        viewModelScope.launch {
+            try {
+                val items = _uiState.value.items
+                if (items.isEmpty()) {
+                    android.widget.Toast.makeText(context, "No credentials to export", android.widget.Toast.LENGTH_SHORT).show()
+                    return@launch
+                }
+
+                val csvContent = buildString {
+                    append("Title,Username,Email,Password,URL,Category,Notes\n")
+                    items.forEach { item ->
+                        append("${item.title.escapeCsv()},${item.username.escapeCsv()},${item.email.escapeCsv()},${item.password.escapeCsv()},${item.url.escapeCsv()},${item.category.escapeCsv()},${(item.notes ?: "").escapeCsv()}\n")
+                    }
+                }
+
+                context.contentResolver.openOutputStream(uri)?.use { outputStream ->
+                    outputStream.write(csvContent.toByteArray())
+                }
+                android.widget.Toast.makeText(context, "Exported successfully!", android.widget.Toast.LENGTH_SHORT).show()
+            } catch (e: Exception) {
+                e.printStackTrace()
+                android.widget.Toast.makeText(context, "Failed to export CSV", android.widget.Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    private fun String.escapeCsv(): String {
+        var escaped = this.replace("\"", "\"\"")
+        if (escaped.contains(",") || escaped.contains("\n") || escaped.contains("\"")) {
+            escaped = "\"$escaped\""
+        }
+        return escaped
+    }
 
     // ========== Form ==========
 

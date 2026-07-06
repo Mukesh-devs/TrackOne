@@ -124,6 +124,9 @@ fun ExpiryNavigation() {
                             viewModel.selectGroup(group)
                             navController.navigate(ExpiryRoutes.DETAIL)
                         },
+                        onDismissGroup = { group ->
+                            viewModel.dismissGroupFromHome(group.name)
+                        },
                         onSearchQueryChange = { viewModel.onSearchQueryChange(it) },
                     )
                 }

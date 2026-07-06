@@ -3,6 +3,7 @@ package com.dev.trackone.feature.expiry.presentation.screen
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -18,6 +19,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Inbox
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.animation.core.animateFloatAsState
@@ -57,6 +59,7 @@ import com.dev.trackone.feature.expiry.presentation.ExpiryUiState
 fun ExpiryHomeScreen(
     uiState: ExpiryUiState,
     onGroupClick: (ExpiryGroup) -> Unit,
+    onDismissGroup: (ExpiryGroup) -> Unit = {},
     onSearchQueryChange: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -100,10 +103,59 @@ fun ExpiryHomeScreen(
                         items = uiState.groups,
                         key = { it.name },
                     ) { group ->
-                        ExpiryGroupCard(
-                            group = group,
-                            onClick = { onGroupClick(group) },
-                        )
+                        val effectiveExpiry = group.nearestExpiry ?: group.items.maxOfOrNull { it.expiryDate } ?: 0L
+                        val isGroupExpired = DateUtils.daysUntil(effectiveExpiry) < 0
+
+                        if (isGroupExpired) {
+                            val dismissState = androidx.compose.material3.rememberSwipeToDismissBoxState(
+                                confirmValueChange = { dismissValue ->
+                                    if (dismissValue == androidx.compose.material3.SwipeToDismissBoxValue.EndToStart) {
+                                        onDismissGroup(group)
+                                        true
+                                    } else {
+                                        false
+                                    }
+                                }
+                            )
+                            androidx.compose.material3.SwipeToDismissBox(
+                                state = dismissState,
+                                enableDismissFromStartToEnd = false,
+                                backgroundContent = {
+                                    val color by androidx.compose.animation.animateColorAsState(
+                                        when (dismissState.targetValue) {
+                                            androidx.compose.material3.SwipeToDismissBoxValue.EndToStart -> MaterialTheme.colorScheme.errorContainer
+                                            else -> androidx.compose.ui.graphics.Color.Transparent
+                                        }
+                                    )
+                                    androidx.compose.foundation.layout.Box(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .background(color, androidx.compose.foundation.shape.RoundedCornerShape(16.dp))
+                                            .padding(end = 24.dp),
+                                        contentAlignment = Alignment.CenterEnd
+                                    ) {
+                                        Icon(
+                                            androidx.compose.material.icons.Icons.Default.Delete,
+                                            contentDescription = "Remove",
+                                            tint = MaterialTheme.colorScheme.onErrorContainer
+                                        )
+                                    }
+                                },
+                                content = {
+                                    ExpiryGroupCard(
+                                        group = group,
+                                        onClick = { onGroupClick(group) },
+                                        showDismissPrompt = true
+                                    )
+                                }
+                            )
+                        } else {
+                            ExpiryGroupCard(
+                                group = group,
+                                onClick = { onGroupClick(group) },
+                                showDismissPrompt = false
+                            )
+                        }
                     }
 
                     // Bottom spacer for floating bar
@@ -121,6 +173,7 @@ fun ExpiryGroupCard(
     group: ExpiryGroup,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    showDismissPrompt: Boolean = false
 ) {
     val item = group.items.first()
     
@@ -246,6 +299,16 @@ fun ExpiryGroupCard(
                         )
                     }
                 }
+            }
+            
+            if (isExpired && showDismissPrompt) {
+                Text(
+                    text = "Swipe left to remove from home",
+                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                    color = cardTextColor.copy(alpha = 0.6f),
+                    modifier = Modifier.padding(top = 8.dp).fillMaxWidth(),
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                )
             }
 
             Spacer(modifier = Modifier.height(14.dp))
