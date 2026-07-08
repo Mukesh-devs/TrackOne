@@ -11,6 +11,8 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.dev.trackone.data.UserPreferences
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -52,7 +54,12 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.clickable
+import androidx.compose.material3.Button
+import androidx.compose.material.icons.filled.Swipe
 import com.dev.trackone.core.ui.theme.Dimens
 
 /**
@@ -206,6 +213,78 @@ fun TrackOneApp(
                         }
                     }
                 }
+                
+                val userPreferences by viewModel.userPreferences.collectAsStateWithLifecycle()
+                if (userPreferences?.hasSeenTour == false) {
+                    GuidedTourOverlay(
+                        onComplete = {
+                            viewModel.completeTour()
+                        }
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun GuidedTourOverlay(onComplete: () -> Unit) {
+    val interactionSource = androidx.compose.runtime.remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.7f))
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                onClick = onComplete
+            )
+    ) {
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Icon(
+                imageVector = androidx.compose.material.icons.Icons.Default.Swipe,
+                contentDescription = null,
+                tint = Color(0xFF00B4D8),
+                modifier = Modifier.size(64.dp)
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = "Swipe here to switch tabs",
+                color = Color.White,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold
+            )
+        }
+        
+        Column(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 120.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Icon(
+                imageVector = androidx.compose.material.icons.Icons.Default.Swipe,
+                contentDescription = null,
+                tint = Color(0xFF00B4D8),
+                modifier = Modifier.size(48.dp)
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "Swipe the bottom bar to switch modules",
+                color = Color.White,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Medium
+            )
+            Spacer(modifier = Modifier.height(24.dp))
+            Button(
+                onClick = onComplete,
+                colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = Color(0xFF00B4D8))
+            ) {
+                Text("Got it!", color = Color.White, fontWeight = FontWeight.Bold)
             }
         }
     }
