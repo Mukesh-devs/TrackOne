@@ -68,14 +68,11 @@ fun ExpenseHomeScreen(
     onSearchQueryChange: (String) -> Unit,
     onPeriodChange: (TimePeriod) -> Unit,
     onNavigateDate: (Boolean) -> Unit,
-    onEditItem: (ExpenseItem) -> Unit,
-    onDeleteItem: (ExpenseItem) -> Unit,
+    onItemClick: (ExpenseItem) -> Unit,
     isRefreshing: Boolean = false,
     onRefresh: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
-    var selectedItem by remember { mutableStateOf<ExpenseItem?>(null) }
-
     androidx.compose.material3.pulltorefresh.PullToRefreshBox(
         isRefreshing = isRefreshing,
         onRefresh = onRefresh,
@@ -155,7 +152,7 @@ fun ExpenseHomeScreen(
                         items(uiState.items, key = { it.id }) { item ->
                             ExpenseItemCard(
                                 item = item,
-                                onDoubleTap = { selectedItem = item },
+                                onClick = { onItemClick(item) },
                                 modifier = Modifier.padding(horizontal = Dimens.SpacingLg),
                             )
                         }
@@ -164,57 +161,6 @@ fun ExpenseHomeScreen(
             }
         }
     }
-    }
-
-    // Long-press action popup
-    selectedItem?.let { item ->
-        AlertDialog(
-            onDismissRequest = { selectedItem = null },
-            title = {
-                Text(
-                    text = item.title,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                )
-            },
-            text = {
-                Text(
-                    text = "${if (item.isIncome) "+" else "-"}${CurrencyUtils.formatAmount(item.amount)}",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = if (item.isIncome) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.error,
-                )
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    onEditItem(item)
-                    selectedItem = null
-                }) {
-                    Icon(
-                        imageVector = Icons.Default.Edit,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp),
-                        tint = MaterialTheme.colorScheme.primary,
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("Edit")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = {
-                    onDeleteItem(item)
-                    selectedItem = null
-                }) {
-                    Icon(
-                        imageVector = Icons.Default.Delete,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp),
-                        tint = MaterialTheme.colorScheme.error,
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("Delete", color = MaterialTheme.colorScheme.error)
-                }
-            },
-        )
     }
 }
 
@@ -311,14 +257,11 @@ private fun BalanceStat(
 @Composable
 private fun ExpenseItemCard(
     item: ExpenseItem,
-    onDoubleTap: () -> Unit,
+    onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     TrackOneCard(
-        modifier = modifier.combinedClickable(
-            onClick = {},
-            onDoubleClick = onDoubleTap,
-        ),
+        modifier = modifier.clickable(onClick = onClick),
         elevation = 4.dp,
     ) {
         Row(

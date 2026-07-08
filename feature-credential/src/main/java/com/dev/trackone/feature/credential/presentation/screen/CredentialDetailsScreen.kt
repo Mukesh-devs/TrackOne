@@ -12,8 +12,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.background
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
@@ -101,75 +103,148 @@ private fun AccountDetailBlock(
     onDelete: () -> Unit,
     onCopy: (String, String) -> Unit,
 ) {
-    Column(
-        verticalArrangement = Arrangement.spacedBy(Dimens.SpacingSm),
-        modifier = Modifier.fillMaxWidth()
+    androidx.compose.material3.Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(20.dp),
+        colors = androidx.compose.material3.CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface,
+        ),
+        elevation = androidx.compose.material3.CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        if (item.category.isNotBlank()) {
-            Text(
-                text = item.category,
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.primary,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(bottom = Dimens.SpacingXs)
-            )
-        }
+        Column(
+            verticalArrangement = Arrangement.spacedBy(Dimens.SpacingMd),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp)
+        ) {
+            // Header Row (Category)
+            if (item.category.isNotBlank()) {
+                androidx.compose.material3.Surface(
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                    shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp)
+                ) {
+                    Text(
+                        text = item.category.uppercase(),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                    )
+                }
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+            }
 
-        if (item.username.isNotBlank()) {
-            InputBarField(
-                value = item.username,
-                onCopy = { onCopy(item.username, "Username") }
-            )
+            if (item.username.isNotBlank()) {
+                InputBarField(
+                    label = "Username",
+                    value = item.username,
+                    onCopy = { onCopy(item.username, "Username") }
+                )
+            }
+            
+            if (item.email.isNotBlank()) {
+                InputBarField(
+                    label = "Email",
+                    value = item.email,
+                    onCopy = { onCopy(item.email, "Email") }
+                )
+            }
+            
+            if (item.password.isNotBlank()) {
+                PasswordInputBarField(
+                    label = "Password",
+                    value = item.password,
+                    onCopy = { onCopy(item.password, "Password") }
+                )
+            }
+            
+            if (item.url.isNotBlank()) {
+                InputBarField(
+                    label = "URL",
+                    value = item.url,
+                    onCopy = { onCopy(item.url, "URL") }
+                )
+            }
+            
+            if (item.notes?.isNotBlank() == true) {
+                InputBarField(
+                    label = "Notes",
+                    value = item.notes ?: "",
+                    onCopy = { onCopy(item.notes ?: "", "Notes") }
+                )
+            }
+            
+            Spacer(modifier = Modifier.height(4.dp))
+            
+            // Action Buttons
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                androidx.compose.material3.OutlinedButton(
+                    onClick = onDelete,
+                    modifier = Modifier.weight(1f),
+                    colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error
+                    )
+                ) {
+                    Icon(Icons.Default.Delete, contentDescription = "Delete", modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Delete")
+                }
+                
+                androidx.compose.material3.Button(
+                    onClick = onEdit,
+                    modifier = Modifier.weight(1f),
+                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
+                    )
+                ) {
+                    Icon(Icons.Default.Edit, contentDescription = "Edit", modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Edit")
+                }
+            }
         }
-        
-        if (item.email.isNotBlank()) {
-            InputBarField(
-                value = item.email,
-                onCopy = { onCopy(item.email, "Email") }
-            )
-        }
-        
-        if (item.password.isNotBlank()) {
-            PasswordInputBarField(
-                value = item.password,
-                onCopy = { onCopy(item.password, "Password") }
-            )
-        }
-        
-        if (item.url.isNotBlank()) {
-            InputBarField(
-                value = item.url,
-                onCopy = { onCopy(item.url, "URL") }
-            )
-        }
-        
-        if (item.notes?.isNotBlank() == true) {
-            InputBarField(
-                value = item.notes ?: "",
-                onCopy = { onCopy(item.notes ?: "", "Notes") }
-            )
-        }
+    }
+}
 
-        // Action Row
+@Composable
+private fun InputBarField(
+    label: String,
+    value: String,
+    onCopy: () -> Unit
+) {
+    Column {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(start = 4.dp, bottom = 4.dp)
+        )
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = Dimens.SpacingSm),
-            horizontalArrangement = Arrangement.End
-        ) {
-            IconButton(onClick = onEdit, modifier = Modifier.size(36.dp)) {
-                Icon(
-                    imageVector = Icons.Default.Edit,
-                    contentDescription = "Edit",
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(20.dp)
+                .background(
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                    shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
                 )
-            }
-            IconButton(onClick = onDelete, modifier = Modifier.size(36.dp)) {
+                .padding(start = 16.dp, end = 4.dp, top = 4.dp, bottom = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                text = value,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.weight(1f)
+            )
+            IconButton(onClick = onCopy) {
                 Icon(
-                    imageVector = Icons.Default.Delete,
-                    contentDescription = "Delete",
-                    tint = MaterialTheme.colorScheme.error,
+                    imageVector = Icons.Default.ContentCopy,
+                    contentDescription = "Copy $label",
+                    tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(20.dp)
                 )
             }
@@ -178,70 +253,57 @@ private fun AccountDetailBlock(
 }
 
 @Composable
-private fun InputBarField(
-    value: String,
-    onCopy: () -> Unit
-) {
-    OutlinedTextField(
-        value = value,
-        onValueChange = {},
-        readOnly = true,
-        singleLine = true,
-        shape = MaterialTheme.shapes.medium,
-        colors = OutlinedTextFieldDefaults.colors(
-            unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
-            focusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
-        ),
-        trailingIcon = {
-            IconButton(onClick = onCopy) {
-                Icon(
-                    imageVector = Icons.Default.ContentCopy,
-                    contentDescription = "Copy",
-                    tint = MaterialTheme.colorScheme.primary
-                )
-            }
-        },
-        modifier = Modifier.fillMaxWidth()
-    )
-}
-
-@Composable
 private fun PasswordInputBarField(
+    label: String,
     value: String,
     onCopy: () -> Unit
 ) {
     var passwordVisible by remember { mutableStateOf(false) }
 
-    OutlinedTextField(
-        value = if (passwordVisible) value else "•".repeat(value.length.coerceAtMost(20).coerceAtLeast(8)),
-        onValueChange = {},
-        readOnly = true,
-        singleLine = true,
-        shape = MaterialTheme.shapes.medium,
-        colors = OutlinedTextFieldDefaults.colors(
-            unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
-            focusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
-        ),
-        trailingIcon = {
+    Column {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(start = 4.dp, bottom = 4.dp)
+        )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                    shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
+                )
+                .padding(start = 16.dp, end = 4.dp, top = 4.dp, bottom = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                text = if (passwordVisible) value else "•".repeat(value.length.coerceAtMost(20).coerceAtLeast(8)),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.weight(1f)
+            )
             Row {
                 IconButton(onClick = { passwordVisible = !passwordVisible }) {
                     Icon(
                         imageVector = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
                         contentDescription = if (passwordVisible) "Hide password" else "Show password",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(20.dp)
                     )
                 }
                 IconButton(onClick = onCopy) {
                     Icon(
                         imageVector = Icons.Default.ContentCopy,
-                        contentDescription = "Copy Password",
-                        tint = MaterialTheme.colorScheme.primary
+                        contentDescription = "Copy $label",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(20.dp)
                     )
                 }
             }
-        },
-        modifier = Modifier.fillMaxWidth()
-    )
+        }
+    }
 }
 
 private fun copyToClipboard(context: Context, text: String, label: String) {

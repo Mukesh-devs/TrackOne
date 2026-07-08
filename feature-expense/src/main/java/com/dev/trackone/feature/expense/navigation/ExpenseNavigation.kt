@@ -42,6 +42,7 @@ object ExpenseRoutes {
     const val STATS = "expense_stats"
     const val SETTINGS = "expense_settings"
     const val EDIT = "expense_edit"
+    const val DETAIL = "expense_detail"
 }
 
 private val expenseBottomNavItems = listOf(
@@ -92,6 +93,15 @@ fun ExpenseNavigation(
                     showSearchIcon = currentRoute == ExpenseRoutes.HOME,
                     onSearchClick = { viewModel.toggleSearch() },
                 )
+            } else if (currentNavRoute == ExpenseRoutes.DETAIL) {
+                TrackOneTopBar(
+                    title = "Transaction Details",
+                    showBackButton = true,
+                    onBackClick = {
+                        viewModel.clearSelectedItem()
+                        navController.popBackStack()
+                    },
+                )
             } else {
                 TrackOneTopBar(
                     title = "Edit Transaction",
@@ -128,12 +138,9 @@ fun ExpenseNavigation(
                                     onSearchQueryChange = { viewModel.onSearchQueryChange(it) },
                                     onPeriodChange = { viewModel.setTimePeriod(it) },
                                     onNavigateDate = { viewModel.navigateDate(it) },
-                                    onEditItem = { item ->
-                                        viewModel.initEditForm(item)
-                                        navController.navigate(ExpenseRoutes.EDIT)
-                                    },
-                                    onDeleteItem = { item ->
-                                        viewModel.deleteItem(item)
+                                    onItemClick = { item ->
+                                        viewModel.selectItem(item)
+                                        navController.navigate(ExpenseRoutes.DETAIL)
                                     },
                                     isRefreshing = uiState.isRefreshing,
                                     onRefresh = { viewModel.refresh() }
@@ -193,6 +200,27 @@ fun ExpenseNavigation(
                             navController.popBackStack()
                         },
                     )
+                }
+
+                composable(ExpenseRoutes.DETAIL) {
+                    uiState.selectedItem?.let { item ->
+                        com.dev.trackone.feature.expense.presentation.screen.ExpenseDetailScreen(
+                            item = item,
+                            onEdit = {
+                                viewModel.initEditForm(item)
+                                navController.navigate(ExpenseRoutes.EDIT)
+                            },
+                            onDelete = {
+                                viewModel.deleteItem(item)
+                                viewModel.clearSelectedItem()
+                                navController.popBackStack()
+                            },
+                            onBack = {
+                                viewModel.clearSelectedItem()
+                                navController.popBackStack()
+                            }
+                        )
+                    }
                 }
             }
 

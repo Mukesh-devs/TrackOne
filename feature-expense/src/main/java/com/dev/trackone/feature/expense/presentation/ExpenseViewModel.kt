@@ -121,6 +121,14 @@ class ExpenseViewModel @Inject constructor(
         }
     }
 
+    fun selectItem(item: ExpenseItem) {
+        _uiState.update { it.copy(selectedItem = item) }
+    }
+
+    fun clearSelectedItem() {
+        _uiState.update { it.copy(selectedItem = null) }
+    }
+
     fun getDateLabel(): String {
         val state = _uiState.value
         return when (state.selectedPeriod) {

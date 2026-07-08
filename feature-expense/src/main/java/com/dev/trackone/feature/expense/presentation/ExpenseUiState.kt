@@ -23,6 +23,7 @@ data class ExpenseUiState(
     val incomeItems: List<ExpenseItem> = emptyList(),
     val expenseItems: List<ExpenseItem> = emptyList(),
     val totalIncome: Double = 0.0,
+    val selectedItem: ExpenseItem? = null,
     val totalExpense: Double = 0.0,
     val balance: Double = 0.0,
     val searchQuery: String = "",
