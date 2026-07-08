@@ -302,7 +302,7 @@ private fun ModuleIndicator(
 ) {
     Column(
         modifier = modifier
-            .background(MaterialTheme.colorScheme.surface)
+            .background(MaterialTheme.colorScheme.primary)
             .padding(top = Dimens.SpacingSm, bottom = Dimens.SpacingSm), // Reduced top padding
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
@@ -316,7 +316,7 @@ private fun ModuleIndicator(
                 Icon(
                     imageVector = Icons.Default.Menu,
                     contentDescription = "Menu",
-                    tint = MaterialTheme.colorScheme.onSurface
+                    tint = MaterialTheme.colorScheme.onPrimary
                 )
             }
 
@@ -335,14 +335,15 @@ private fun ModuleIndicator(
                     Icon(
                         imageVector = module.icon,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
+                        tint = MaterialTheme.colorScheme.onPrimary,
                         modifier = Modifier.size(Dimens.IconSizeMd),
                     )
                     Spacer(modifier = Modifier.width(Dimens.SpacingSm))
                     Text(
                         text = module.title,
                         style = MaterialTheme.typography.titleLarge,
-                        color = MaterialTheme.colorScheme.onSurface,
+                        color = MaterialTheme.colorScheme.onPrimary,
+                        fontWeight = FontWeight.Bold
                     )
                 }
             }
@@ -352,47 +353,9 @@ private fun ModuleIndicator(
                 Icon(
                     imageVector = Icons.Outlined.Cloud,
                     contentDescription = "Cloud Sync",
-                    tint = MaterialTheme.colorScheme.onSurface
+                    tint = MaterialTheme.colorScheme.onPrimary
                 )
             }
         } // Close outer Row
-
-        Spacer(modifier = Modifier.height(2.dp)) // Drastically reduced spacer height
-
-        // Page indicator dots
-        Row(
-            horizontalArrangement = Arrangement.Center,
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            modules.forEachIndexed { index, _ ->
-                val isSelected = index == currentPage
-
-                val dotWidth by animateDpAsState(
-                    targetValue = if (isSelected) 24.dp else 8.dp,
-                    animationSpec = spring(
-                        dampingRatio = Spring.DampingRatioMediumBouncy,
-                        stiffness = Spring.StiffnessMedium,
-                    ),
-                    label = "dot_width",
-                )
-                val dotColor by animateColorAsState(
-                    targetValue = if (isSelected) {
-                        MaterialTheme.colorScheme.primary
-                    } else {
-                        MaterialTheme.colorScheme.outlineVariant
-                    },
-                    label = "dot_color",
-                )
-
-                Box(
-                    modifier = Modifier
-                        .padding(horizontal = 3.dp)
-                        .height(8.dp)
-                        .width(dotWidth)
-                        .clip(CircleShape)
-                        .background(dotColor),
-                )
-            }
-        }
     }
 }
