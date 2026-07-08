@@ -17,8 +17,9 @@ class ExpenseModuleEntry @Inject constructor() : ModuleEntry {
     override val icon: ImageVector = Icons.Default.AccountBalanceWallet
     override val order: Int = 1
 
+    @androidx.compose.material3.ExperimentalMaterial3Api
     @Composable
-    override fun Content() {
-        ExpenseNavigation()
+    override fun Content(onSwipeLeft: () -> Unit, onSwipeRight: () -> Unit) {
+        ExpenseNavigation(onSwipeLeft = onSwipeLeft, onSwipeRight = onSwipeRight)
     }
 }

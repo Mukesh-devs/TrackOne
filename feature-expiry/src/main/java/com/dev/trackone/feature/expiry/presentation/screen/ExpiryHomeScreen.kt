@@ -55,15 +55,23 @@ import com.dev.trackone.feature.expiry.presentation.ExpiryUiState
  * Home screen showing grouped expiry items.
  * Items with the same name are grouped into a single card.
  */
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 fun ExpiryHomeScreen(
     uiState: ExpiryUiState,
     onGroupClick: (ExpiryGroup) -> Unit,
     onDismissGroup: (ExpiryGroup) -> Unit = {},
     onSearchQueryChange: (String) -> Unit,
+    isRefreshing: Boolean = false,
+    onRefresh: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
-    Column(modifier = modifier.fillMaxSize()) {
+    androidx.compose.material3.pulltorefresh.PullToRefreshBox(
+        isRefreshing = isRefreshing,
+        onRefresh = onRefresh,
+        modifier = modifier.fillMaxSize(),
+    ) {
+    Column(modifier = Modifier.fillMaxSize()) {
         // Search bar
         AnimatedVisibility(
             visible = uiState.isSearchActive,
@@ -166,6 +174,7 @@ fun ExpiryHomeScreen(
             }
         }
     }
+}
 }
 
 @Composable

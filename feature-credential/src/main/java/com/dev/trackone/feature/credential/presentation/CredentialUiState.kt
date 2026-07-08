@@ -7,6 +7,7 @@ import com.dev.trackone.feature.credential.domain.model.CredentialItem
  */
 data class CredentialUiState(
     val isLoading: Boolean = true,
+    val isRefreshing: Boolean = false,
     val items: List<CredentialItem> = emptyList(),
     val favoriteItems: List<CredentialItem> = emptyList(),
     val categories: List<String> = emptyList(),

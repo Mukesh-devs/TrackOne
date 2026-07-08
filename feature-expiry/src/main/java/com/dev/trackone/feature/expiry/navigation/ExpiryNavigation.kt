@@ -23,6 +23,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -35,11 +36,13 @@ import com.dev.trackone.feature.expiry.presentation.screen.ExpiryAddScreen
 import com.dev.trackone.feature.expiry.presentation.screen.ExpiryDetailScreen
 import com.dev.trackone.feature.expiry.presentation.screen.ExpiryExpiredScreen
 import com.dev.trackone.feature.expiry.presentation.screen.ExpiryHomeScreen
+import kotlinx.coroutines.launch
 
 /**
  * Route constants for Expiry module internal navigation.
  */
 object ExpiryRoutes {
+    const val MAIN_PAGER = "expiry_main_pager"
     const val HOME = "expiry_home"
     const val ADD = "expiry_add"
     const val EXPIRED = "expiry_expired"
@@ -64,18 +67,29 @@ private val expiryBottomNavItems = listOf(
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ExpiryNavigation() {
-    val navController = rememberNavController()
-    val viewModel: ExpiryViewModel = hiltViewModel()
+fun ExpiryNavigation(
+    onSwipeLeft: () -> Unit = {},
+    onSwipeRight: () -> Unit = {},
+    modifier: Modifier = Modifier,
+    navController: NavHostController = rememberNavController(),
+    viewModel: ExpiryViewModel = hiltViewModel()
+) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val formState by viewModel.formState.collectAsStateWithLifecycle()
+    
+    val coroutineScope = androidx.compose.runtime.rememberCoroutineScope()
+    val pagerState = androidx.compose.foundation.pager.rememberPagerState(pageCount = { expiryBottomNavItems.size })
 
     val navBackStackEntry by navController.currentBackStackEntryAsState()
-    val currentRoute = navBackStackEntry?.destination?.route ?: ExpiryRoutes.HOME
+    val currentNavRoute = navBackStackEntry?.destination?.route
     
-    val isOnMainScreen = currentRoute in listOf(
-        ExpiryRoutes.HOME, ExpiryRoutes.ADD, ExpiryRoutes.EXPIRED, ExpiryRoutes.SETTINGS
-    )
+    val currentRoute = if (currentNavRoute == ExpiryRoutes.MAIN_PAGER || currentNavRoute == null) {
+        expiryBottomNavItems[pagerState.currentPage].route
+    } else {
+        currentNavRoute
+    }
+    
+    val isOnMainScreen = currentNavRoute == ExpiryRoutes.MAIN_PAGER || currentNavRoute == null
 
     com.dev.trackone.core.ui.theme.ExpiryModuleTheme {
     Scaffold(
@@ -112,65 +126,71 @@ fun ExpiryNavigation() {
         ) {
             NavHost(
                 navController = navController,
-                startDestination = ExpiryRoutes.HOME,
+                startDestination = ExpiryRoutes.MAIN_PAGER,
                 modifier = Modifier.fillMaxSize(),
                 enterTransition = { fadeIn(tween(200)) },
                 exitTransition = { fadeOut(tween(200)) },
             ) {
-                composable(ExpiryRoutes.HOME) {
-                    ExpiryHomeScreen(
-                        uiState = uiState,
-                        onGroupClick = { group ->
-                            viewModel.selectGroup(group)
-                            navController.navigate(ExpiryRoutes.DETAIL)
-                        },
-                        onDismissGroup = { group ->
-                            viewModel.dismissGroupFromHome(group.name)
-                        },
-                        onSearchQueryChange = { viewModel.onSearchQueryChange(it) },
-                    )
-                }
-
-                composable(ExpiryRoutes.ADD) {
-                    ExpiryAddScreen(
-                        formState = formState,
-                        onNameChange = viewModel::updateFormName,
-                        onProviderChange = viewModel::updateFormProvider,
-                        onLabelChange = viewModel::updateFormLabel,
-                        onPurchasedDateChange = viewModel::updateFormPurchasedDate,
-                        onExpiryDateChange = viewModel::updateFormExpiryDate,
-                        onNotesChange = viewModel::updateFormNotes,
-                        onAmountChange = viewModel::updateFormAmount,
-                        onUsernameChange = viewModel::updateFormUsername,
-                        onEmailChange = viewModel::updateFormEmail,
-                        onPasswordChange = viewModel::updateFormPassword,
-                        onSave = viewModel::saveForm,
-                        onSaveSuccess = {
-                            viewModel.resetSaveSuccess()
-                            navController.navigate(ExpiryRoutes.HOME) {
-                                popUpTo(ExpiryRoutes.HOME) { inclusive = true }
+                composable(ExpiryRoutes.MAIN_PAGER) {
+                    androidx.compose.foundation.pager.HorizontalPager(
+                        state = pagerState,
+                        modifier = Modifier.fillMaxSize()
+                    ) { page ->
+                        when (expiryBottomNavItems[page].route) {
+                            ExpiryRoutes.HOME -> {
+                                ExpiryHomeScreen(
+                                    uiState = uiState,
+                                    onGroupClick = { group ->
+                                        viewModel.selectGroup(group)
+                                        navController.navigate(ExpiryRoutes.DETAIL)
+                                    },
+                                    onDismissGroup = { group ->
+                                        viewModel.dismissGroupFromHome(group.name)
+                                    },
+                                    onSearchQueryChange = { viewModel.onSearchQueryChange(it) },
+                                    isRefreshing = uiState.isRefreshing,
+                                    onRefresh = { viewModel.refresh() }
+                                )
                             }
-                        },
-                    )
-                }
-
-                composable(ExpiryRoutes.EXPIRED) {
-                    ExpiryExpiredScreen(
-                        uiState = uiState,
-                        onGroupClick = { group ->
-                            viewModel.selectGroup(group)
-                            navController.navigate(ExpiryRoutes.DETAIL)
-                        },
-                    )
-                }
-
-                composable(ExpiryRoutes.SETTINGS) {
-                    // Placeholder settings screen
-                    com.dev.trackone.core.ui.component.TrackOneEmptyState(
-                        icon = Icons.Default.Settings,
-                        title = "Settings",
-                        subtitle = "Expiry module settings coming soon",
-                    )
+                            ExpiryRoutes.ADD -> {
+                                ExpiryAddScreen(
+                                    formState = formState,
+                                    onNameChange = viewModel::updateFormName,
+                                    onProviderChange = viewModel::updateFormProvider,
+                                    onLabelChange = viewModel::updateFormLabel,
+                                    onPurchasedDateChange = viewModel::updateFormPurchasedDate,
+                                    onExpiryDateChange = viewModel::updateFormExpiryDate,
+                                    onNotesChange = viewModel::updateFormNotes,
+                                    onAmountChange = viewModel::updateFormAmount,
+                                    onUsernameChange = viewModel::updateFormUsername,
+                                    onEmailChange = viewModel::updateFormEmail,
+                                    onPasswordChange = viewModel::updateFormPassword,
+                                    onSave = viewModel::saveForm,
+                                    onSaveSuccess = {
+                                        viewModel.resetSaveSuccess()
+                                        // Scroll back to Home
+                                        coroutineScope.launch { pagerState.animateScrollToPage(0) }
+                                    },
+                                )
+                            }
+                            ExpiryRoutes.EXPIRED -> {
+                                ExpiryExpiredScreen(
+                                    uiState = uiState,
+                                    onGroupClick = { group ->
+                                        viewModel.selectGroup(group)
+                                        navController.navigate(ExpiryRoutes.DETAIL)
+                                    },
+                                )
+                            }
+                            ExpiryRoutes.SETTINGS -> {
+                                com.dev.trackone.core.ui.component.TrackOneEmptyState(
+                                    icon = Icons.Default.Settings,
+                                    title = "Settings",
+                                    subtitle = "Expiry module settings coming soon",
+                                )
+                            }
+                        }
+                    }
                 }
 
                 composable(ExpiryRoutes.DETAIL) {
@@ -215,15 +235,15 @@ fun ExpiryNavigation() {
                 TrackOneBottomBar(
                     items = expiryBottomNavItems,
                     selectedRoute = currentRoute,
+                    onSwipeLeft = onSwipeLeft,
+                    onSwipeRight = onSwipeRight,
                     onItemSelected = { item ->
-                        if (item.route != currentRoute) {
+                        val index = expiryBottomNavItems.indexOfFirst { it.route == item.route }
+                        if (index >= 0) {
                             if (item.route == ExpiryRoutes.ADD) {
                                 viewModel.initAddForm()
                             }
-                            navController.navigate(item.route) {
-                                popUpTo(ExpiryRoutes.HOME) { inclusive = false }
-                                launchSingleTop = true
-                            }
+                            coroutineScope.launch { pagerState.animateScrollToPage(index) }
                         }
                     },
                     modifier = Modifier.align(Alignment.BottomCenter),

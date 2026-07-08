@@ -1,5 +1,8 @@
 package com.dev.trackone.ui
 
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Spring
@@ -7,6 +10,7 @@ import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -43,6 +47,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -76,22 +81,17 @@ fun TrackOneApp(
         return
     }
 
-    val pagerState = rememberPagerState(
-        initialPage = 0,
-        pageCount = { modules.size },
-    )
+    var currentModuleIndex by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(0) }
 
-    // Sync pager state with ViewModel
-    LaunchedEffect(pagerState) {
-        snapshotFlow { pagerState.currentPage }.collect { page ->
-            viewModel.setCurrentPage(page)
-        }
+    // Sync state with ViewModel
+    LaunchedEffect(currentModuleIndex) {
+        viewModel.setCurrentPage(currentModuleIndex)
     }
 
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val coroutineScope = rememberCoroutineScope()
 
-    val currentModuleTitle = if (pagerState.currentPage in modules.indices) modules[pagerState.currentPage].title else ""
+    val currentModuleTitle = if (currentModuleIndex in modules.indices) modules[currentModuleIndex].title else ""
     
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -120,7 +120,7 @@ fun TrackOneApp(
                 Spacer(modifier = Modifier.height(16.dp))
                 
                 modules.forEachIndexed { index, module ->
-                    val isSelected = pagerState.currentPage == index
+                    val isSelected = currentModuleIndex == index
                     NavigationDrawerItem(
                         label = { 
                             Text(
@@ -133,7 +133,7 @@ fun TrackOneApp(
                         onClick = {
                             coroutineScope.launch {
                                 drawerState.close()
-                                pagerState.animateScrollToPage(index)
+                                currentModuleIndex = index
                             }
                         },
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
@@ -155,38 +155,57 @@ fun TrackOneApp(
         Scaffold(
             containerColor = MaterialTheme.colorScheme.background,
         ) { innerPadding ->
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding),
-            ) {
-            // Module indicator header
-                com.dev.trackone.core.ui.theme.DynamicModuleTheme(moduleTitle = currentModuleTitle) {
-                    ModuleIndicator(
-                        modules = modules,
-                        currentPage = pagerState.currentPage,
-                        onMenuClick = { coroutineScope.launch { drawerState.open() } },
-                        onCloudClick = { /* Will implement in future */ },
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                }
-
-                // Module pages
-            HorizontalPager(
-                state = pagerState,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f),
-                beyondViewportPageCount = 1,
-                key = { modules[it].order },
-            ) { pageIndex ->
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background,
+            Box(modifier = Modifier.fillMaxSize()) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding),
                 ) {
-                    modules[pageIndex].Content()
+                    // Module indicator header
+                    com.dev.trackone.core.ui.theme.DynamicModuleTheme(moduleTitle = currentModuleTitle) {
+                        ModuleIndicator(
+                            modules = modules,
+                            currentPage = currentModuleIndex,
+                            onMenuClick = { coroutineScope.launch { drawerState.open() } },
+                            onCloudClick = { /* Will implement in future */ },
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
+
+                    // Module pages
+                    androidx.compose.animation.AnimatedContent(
+                        targetState = currentModuleIndex,
+                        transitionSpec = {
+                            if (targetState > initialState) {
+                                (androidx.compose.animation.slideInHorizontally { width -> width } + androidx.compose.animation.fadeIn()).togetherWith(
+                                    androidx.compose.animation.slideOutHorizontally { width -> -width } + androidx.compose.animation.fadeOut()
+                                )
+                            } else {
+                                (androidx.compose.animation.slideInHorizontally { width -> -width } + androidx.compose.animation.fadeIn()).togetherWith(
+                                    androidx.compose.animation.slideOutHorizontally { width -> width } + androidx.compose.animation.fadeOut()
+                                )
+                            }
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f),
+                        label = "ModuleTransition"
+                    ) { targetIndex ->
+                        Surface(
+                            modifier = Modifier.fillMaxSize(),
+                            color = MaterialTheme.colorScheme.background,
+                        ) {
+                            modules[targetIndex].Content(
+                                onSwipeLeft = {
+                                    currentModuleIndex = (currentModuleIndex + 1).coerceAtMost(modules.size - 1)
+                                },
+                                onSwipeRight = {
+                                    currentModuleIndex = (currentModuleIndex - 1).coerceAtLeast(0)
+                                }
+                            )
+                        }
+                    }
                 }
-            }
             }
         }
     }

@@ -22,6 +22,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -32,8 +33,10 @@ import com.dev.trackone.core.ui.component.TrackOneTopBar
 import com.dev.trackone.feature.expense.presentation.ExpenseViewModel
 import com.dev.trackone.feature.expense.presentation.screen.ExpenseAddScreen
 import com.dev.trackone.feature.expense.presentation.screen.ExpenseHomeScreen
+import kotlinx.coroutines.launch
 
 object ExpenseRoutes {
+    const val MAIN_PAGER = "expense_main_pager"
     const val HOME = "expense_home"
     const val ADD = "expense_add"
     const val STATS = "expense_stats"
@@ -48,20 +51,31 @@ private val expenseBottomNavItems = listOf(
     BottomNavItem("Settings", Icons.Default.Settings, ExpenseRoutes.SETTINGS),
 )
 
-@OptIn(ExperimentalMaterial3Api::class)
+@androidx.compose.material3.ExperimentalMaterial3Api
 @Composable
-fun ExpenseNavigation() {
-    val navController = rememberNavController()
-    val viewModel: ExpenseViewModel = hiltViewModel()
+fun ExpenseNavigation(
+    onSwipeLeft: () -> Unit = {},
+    onSwipeRight: () -> Unit = {},
+    modifier: Modifier = Modifier,
+    navController: NavHostController = rememberNavController(),
+    viewModel: ExpenseViewModel = hiltViewModel()
+) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val formState by viewModel.formState.collectAsStateWithLifecycle()
 
+    val coroutineScope = androidx.compose.runtime.rememberCoroutineScope()
+    val pagerState = androidx.compose.foundation.pager.rememberPagerState(pageCount = { expenseBottomNavItems.size })
+
     val navBackStackEntry by navController.currentBackStackEntryAsState()
-    val currentRoute = navBackStackEntry?.destination?.route ?: ExpenseRoutes.HOME
+    val currentNavRoute = navBackStackEntry?.destination?.route
     
-    val isOnMainScreen = currentRoute in listOf(
-        ExpenseRoutes.HOME, ExpenseRoutes.ADD, ExpenseRoutes.STATS, ExpenseRoutes.SETTINGS
-    )
+    val currentRoute = if (currentNavRoute == ExpenseRoutes.MAIN_PAGER || currentNavRoute == null) {
+        expenseBottomNavItems[pagerState.currentPage].route
+    } else {
+        currentNavRoute
+    }
+    
+    val isOnMainScreen = currentNavRoute == ExpenseRoutes.MAIN_PAGER || currentNavRoute == null
 
     com.dev.trackone.core.ui.theme.ExpenseModuleTheme {
     Scaffold(
@@ -96,65 +110,71 @@ fun ExpenseNavigation() {
         ) {
             NavHost(
                 navController = navController,
-                startDestination = ExpenseRoutes.HOME,
+                startDestination = ExpenseRoutes.MAIN_PAGER,
                 modifier = Modifier.fillMaxSize(),
                 enterTransition = { fadeIn(tween(200)) },
                 exitTransition = { fadeOut(tween(200)) },
             ) {
-                composable(ExpenseRoutes.HOME) {
-                    ExpenseHomeScreen(
-                        uiState = uiState,
-                        dateLabel = viewModel.getDateLabel(),
-                        onSearchQueryChange = { viewModel.onSearchQueryChange(it) },
-                        onPeriodChange = { viewModel.setTimePeriod(it) },
-                        onNavigateDate = { viewModel.navigateDate(it) },
-                        onEditItem = { item ->
-                            viewModel.initEditForm(item)
-                            navController.navigate(ExpenseRoutes.EDIT)
-                        },
-                        onDeleteItem = { item ->
-                            viewModel.deleteItem(item)
-                        },
-                    )
-                }
-
-                composable(ExpenseRoutes.ADD) {
-                    ExpenseAddScreen(
-                        formState = formState,
-                        onTitleChange = viewModel::updateFormTitle,
-                        onAmountChange = viewModel::updateFormAmount,
-                        onTypeChange = viewModel::updateFormType,
-                        onCategoryChange = viewModel::updateFormCategory,
-                        onPaymentModeChange = viewModel::updateFormPaymentMode,
-                        onDateChange = viewModel::updateFormDate,
-                        onNotesChange = viewModel::updateFormNotes,
-                        onSave = viewModel::saveForm,
-                        onSaveSuccess = {
-                            viewModel.resetSaveSuccess()
-                            navController.navigate(ExpenseRoutes.HOME) {
-                                popUpTo(ExpenseRoutes.HOME) { inclusive = true }
+                composable(ExpenseRoutes.MAIN_PAGER) {
+                    androidx.compose.foundation.pager.HorizontalPager(
+                        state = pagerState,
+                        modifier = Modifier.fillMaxSize()
+                    ) { page ->
+                        when (expenseBottomNavItems[page].route) {
+                            ExpenseRoutes.HOME -> {
+                                ExpenseHomeScreen(
+                                    uiState = uiState,
+                                    dateLabel = viewModel.getDateLabel(),
+                                    onSearchQueryChange = { viewModel.onSearchQueryChange(it) },
+                                    onPeriodChange = { viewModel.setTimePeriod(it) },
+                                    onNavigateDate = { viewModel.navigateDate(it) },
+                                    onEditItem = { item ->
+                                        viewModel.initEditForm(item)
+                                        navController.navigate(ExpenseRoutes.EDIT)
+                                    },
+                                    onDeleteItem = { item ->
+                                        viewModel.deleteItem(item)
+                                    },
+                                    isRefreshing = uiState.isRefreshing,
+                                    onRefresh = { viewModel.refresh() }
+                                )
                             }
-                        },
-                    )
-                }
-                composable(ExpenseRoutes.STATS) {
-                    com.dev.trackone.feature.expense.presentation.screen.ExpenseStatsScreen(
-                        uiState = uiState,
-                        dateLabel = viewModel.getDateLabel(),
-                        onDateRangeSelected = viewModel::setStatsDateRange,
-                        onPeriodChange = viewModel::setTimePeriod,
-                        onNavigateDate = viewModel::navigateDate,
-                        getCsvData = viewModel::generateCsvData
-                    )
-                }
-
-                composable(ExpenseRoutes.SETTINGS) {
-                    // Placeholder settings screen
-                    com.dev.trackone.core.ui.component.TrackOneEmptyState(
-                        icon = Icons.Default.Settings,
-                        title = "Settings",
-                        subtitle = "Expense module settings coming soon",
-                    )
+                            ExpenseRoutes.ADD -> {
+                                ExpenseAddScreen(
+                                    formState = formState,
+                                    onTitleChange = viewModel::updateFormTitle,
+                                    onAmountChange = viewModel::updateFormAmount,
+                                    onTypeChange = viewModel::updateFormType,
+                                    onCategoryChange = viewModel::updateFormCategory,
+                                    onPaymentModeChange = viewModel::updateFormPaymentMode,
+                                    onDateChange = viewModel::updateFormDate,
+                                    onNotesChange = viewModel::updateFormNotes,
+                                    onSave = viewModel::saveForm,
+                                    onSaveSuccess = {
+                                        viewModel.resetSaveSuccess()
+                                        coroutineScope.launch { pagerState.animateScrollToPage(0) }
+                                    },
+                                )
+                            }
+                            ExpenseRoutes.STATS -> {
+                                com.dev.trackone.feature.expense.presentation.screen.ExpenseStatsScreen(
+                                    uiState = uiState,
+                                    dateLabel = viewModel.getDateLabel(),
+                                    onDateRangeSelected = viewModel::setStatsDateRange,
+                                    onPeriodChange = viewModel::setTimePeriod,
+                                    onNavigateDate = viewModel::navigateDate,
+                                    getCsvData = viewModel::generateCsvData
+                                )
+                            }
+                            ExpenseRoutes.SETTINGS -> {
+                                com.dev.trackone.core.ui.component.TrackOneEmptyState(
+                                    icon = Icons.Default.Settings,
+                                    title = "Settings",
+                                    subtitle = "Expense module settings coming soon",
+                                )
+                            }
+                        }
+                    }
                 }
 
                 composable(ExpenseRoutes.EDIT) {
@@ -181,15 +201,15 @@ fun ExpenseNavigation() {
                 TrackOneBottomBar(
                     items = expenseBottomNavItems,
                     selectedRoute = currentRoute,
+                    onSwipeLeft = onSwipeLeft,
+                    onSwipeRight = onSwipeRight,
                     onItemSelected = { item ->
-                        if (item.route != currentRoute) {
+                        val index = expenseBottomNavItems.indexOfFirst { it.route == item.route }
+                        if (index >= 0) {
                             if (item.route == ExpenseRoutes.ADD) {
                                 viewModel.initAddForm()
                             }
-                            navController.navigate(item.route) {
-                                popUpTo(ExpenseRoutes.HOME) { inclusive = false }
-                                launchSingleTop = true
-                            }
+                            coroutineScope.launch { pagerState.animateScrollToPage(index) }
                         }
                     },
                     modifier = Modifier.align(Alignment.BottomCenter),

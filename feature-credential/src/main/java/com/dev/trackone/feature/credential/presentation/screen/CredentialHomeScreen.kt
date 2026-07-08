@@ -38,17 +38,25 @@ import com.dev.trackone.core.ui.component.TrackOneSearchBar
 import com.dev.trackone.core.ui.theme.Dimens
 import com.dev.trackone.feature.credential.presentation.CredentialUiState
 
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 fun CredentialHomeScreen(
     uiState: CredentialUiState,
     onSearchQueryChange: (String) -> Unit,
     onCategoryFilterChange: (String?) -> Unit,
     onGroupClick: (String) -> Unit,
+    isRefreshing: Boolean = false,
+    onRefresh: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val groupedItems = uiState.items.groupBy { it.title }.toSortedMap(String.CASE_INSENSITIVE_ORDER)
 
-    Column(modifier = modifier.fillMaxSize()) {
+    androidx.compose.material3.pulltorefresh.PullToRefreshBox(
+        isRefreshing = isRefreshing,
+        onRefresh = onRefresh,
+        modifier = modifier.fillMaxSize(),
+    ) {
+    Column(modifier = Modifier.fillMaxSize()) {
         AnimatedVisibility(
             visible = uiState.isSearchActive,
             enter = fadeIn(),
@@ -122,6 +130,7 @@ fun CredentialHomeScreen(
             }
         }
     }
+}
 }
 
 @Composable

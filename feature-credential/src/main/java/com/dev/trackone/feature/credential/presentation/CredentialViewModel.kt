@@ -98,6 +98,15 @@ class CredentialViewModel @Inject constructor(
 
     // ========== CRUD ==========
 
+    fun refresh() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isRefreshing = true) }
+            kotlinx.coroutines.delay(800) // Fake delay for UX
+            loadData()
+            _uiState.update { it.copy(isRefreshing = false) }
+        }
+    }
+
     fun toggleFavorite(item: CredentialItem) {
         viewModelScope.launch {
             repository.update(item.copy(isFavorite = !item.isFavorite))

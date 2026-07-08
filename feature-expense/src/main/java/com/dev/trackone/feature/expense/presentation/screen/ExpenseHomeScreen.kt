@@ -60,6 +60,7 @@ import com.dev.trackone.feature.expense.domain.model.ExpenseItem
 import com.dev.trackone.feature.expense.presentation.ExpenseUiState
 import com.dev.trackone.feature.expense.presentation.TimePeriod
 
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 fun ExpenseHomeScreen(
     uiState: ExpenseUiState,
@@ -69,11 +70,18 @@ fun ExpenseHomeScreen(
     onNavigateDate: (Boolean) -> Unit,
     onEditItem: (ExpenseItem) -> Unit,
     onDeleteItem: (ExpenseItem) -> Unit,
+    isRefreshing: Boolean = false,
+    onRefresh: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     var selectedItem by remember { mutableStateOf<ExpenseItem?>(null) }
 
-    Column(modifier = modifier.fillMaxSize()) {
+    androidx.compose.material3.pulltorefresh.PullToRefreshBox(
+        isRefreshing = isRefreshing,
+        onRefresh = onRefresh,
+        modifier = modifier.fillMaxSize(),
+    ) {
+    Column(modifier = Modifier.fillMaxSize()) {
         // Search bar (fixed)
         AnimatedVisibility(
             visible = uiState.isSearchActive,
@@ -155,6 +163,7 @@ fun ExpenseHomeScreen(
                 }
             }
         }
+    }
     }
 
     // Long-press action popup

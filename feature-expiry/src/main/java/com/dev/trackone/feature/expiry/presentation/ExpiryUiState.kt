@@ -8,6 +8,7 @@ import com.dev.trackone.feature.expiry.domain.model.ExpiryItem
  */
 data class ExpiryUiState(
     val isLoading: Boolean = true,
+    val isRefreshing: Boolean = false,
     val groups: List<ExpiryGroup> = emptyList(),
     val expiredItems: List<ExpiryItem> = emptyList(),
     val allItems: List<ExpiryItem> = emptyList(),

@@ -18,6 +18,7 @@ enum class TimePeriod(val label: String) {
  */
 data class ExpenseUiState(
     val isLoading: Boolean = true,
+    val isRefreshing: Boolean = false,
     val items: List<ExpenseItem> = emptyList(),
     val incomeItems: List<ExpenseItem> = emptyList(),
     val expenseItems: List<ExpenseItem> = emptyList(),

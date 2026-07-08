@@ -18,6 +18,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -34,8 +35,10 @@ import com.dev.trackone.feature.credential.presentation.screen.CredentialHomeScr
 import java.net.URLDecoder
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
+import kotlinx.coroutines.launch
 
 object CredentialRoutes {
+    const val MAIN_PAGER = "credential_main_pager"
     const val HOME = "credential_home"
     const val ADD = "credential_add"
     const val SETTINGS = "credential_settings"
@@ -54,20 +57,31 @@ private val credentialBottomNavItems = listOf(
     BottomNavItem("Settings", Icons.Default.Settings, CredentialRoutes.SETTINGS),
 )
 
-@OptIn(ExperimentalMaterial3Api::class)
+@androidx.compose.material3.ExperimentalMaterial3Api
 @Composable
-fun CredentialNavigation() {
-    val navController = rememberNavController()
-    val viewModel: CredentialViewModel = hiltViewModel()
+fun CredentialNavigation(
+    onSwipeLeft: () -> Unit = {},
+    onSwipeRight: () -> Unit = {},
+    modifier: Modifier = Modifier,
+    navController: NavHostController = rememberNavController(),
+    viewModel: CredentialViewModel = hiltViewModel()
+) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val formState by viewModel.formState.collectAsStateWithLifecycle()
 
+    val coroutineScope = androidx.compose.runtime.rememberCoroutineScope()
+    val pagerState = androidx.compose.foundation.pager.rememberPagerState(pageCount = { credentialBottomNavItems.size })
+
     val navBackStackEntry by navController.currentBackStackEntryAsState()
-    val currentRoute = navBackStackEntry?.destination?.route ?: CredentialRoutes.HOME
+    val currentNavRoute = navBackStackEntry?.destination?.route
     
-    val isOnMainScreen = currentRoute in listOf(
-        CredentialRoutes.HOME, CredentialRoutes.ADD, CredentialRoutes.SETTINGS
-    )
+    val currentRoute = if (currentNavRoute == CredentialRoutes.MAIN_PAGER || currentNavRoute == null) {
+        credentialBottomNavItems[pagerState.currentPage].route
+    } else {
+        currentNavRoute
+    }
+    
+    val isOnMainScreen = currentNavRoute == CredentialRoutes.MAIN_PAGER || currentNavRoute == null
 
     com.dev.trackone.core.ui.theme.CredentialModuleTheme {
     Scaffold(
@@ -109,20 +123,55 @@ fun CredentialNavigation() {
         ) {
             NavHost(
                 navController = navController,
-                startDestination = CredentialRoutes.HOME,
+                startDestination = CredentialRoutes.MAIN_PAGER,
                 modifier = Modifier.fillMaxSize(),
                 enterTransition = { fadeIn(tween(200)) },
                 exitTransition = { fadeOut(tween(200)) },
             ) {
-                composable(CredentialRoutes.HOME) {
-                    CredentialHomeScreen(
-                        uiState = uiState,
-                        onSearchQueryChange = { viewModel.onSearchQueryChange(it) },
-                        onCategoryFilterChange = { viewModel.setCategoryFilter(it) },
-                        onGroupClick = { title ->
-                            navController.navigate(CredentialRoutes.createDetailsRoute(title))
+                composable(CredentialRoutes.MAIN_PAGER) {
+                    androidx.compose.foundation.pager.HorizontalPager(
+                        state = pagerState,
+                        modifier = Modifier.fillMaxSize()
+                    ) { page ->
+                        when (credentialBottomNavItems[page].route) {
+                            CredentialRoutes.HOME -> {
+                                CredentialHomeScreen(
+                                    uiState = uiState,
+                                    onSearchQueryChange = { viewModel.onSearchQueryChange(it) },
+                                    onCategoryFilterChange = { viewModel.setCategoryFilter(it) },
+                                    onGroupClick = { title ->
+                                        navController.navigate(CredentialRoutes.createDetailsRoute(title))
+                                    },
+                                    isRefreshing = uiState.isRefreshing,
+                                    onRefresh = { viewModel.refresh() }
+                                )
+                            }
+                            CredentialRoutes.ADD -> {
+                                CredentialAddScreen(
+                                    formState = formState,
+                                    onTitleChange = viewModel::updateFormTitle,
+                                    onUsernameChange = viewModel::updateFormUsername,
+                                    onEmailChange = viewModel::updateFormEmail,
+                                    onPasswordChange = viewModel::updateFormPassword,
+                                    onUrlChange = viewModel::updateFormUrl,
+                                    onCategoryChange = viewModel::updateFormCategory,
+                                    onNotesChange = viewModel::updateFormNotes,
+                                    onFavoriteChange = viewModel::updateFormFavorite,
+                                    onSave = viewModel::saveForm,
+                                    onSaveSuccess = {
+                                        viewModel.resetSaveSuccess()
+                                        coroutineScope.launch { pagerState.animateScrollToPage(0) }
+                                    },
+                                )
+                            }
+                            CredentialRoutes.SETTINGS -> {
+                                val context = androidx.compose.ui.platform.LocalContext.current
+                                com.dev.trackone.feature.credential.presentation.screen.CredentialSettingsScreen(
+                                    onExportCsv = { uri -> viewModel.exportCsv(uri, context) }
+                                )
+                            }
                         }
-                    )
+                    }
                 }
                 
                 composable(
@@ -144,34 +193,6 @@ fun CredentialNavigation() {
                             // If it was the last item for this title, we should probably go back, 
                             // but UI state will handle the empty list gracefully or we could pop back automatically.
                         }
-                    )
-                }
-
-                composable(CredentialRoutes.ADD) {
-                    CredentialAddScreen(
-                        formState = formState,
-                        onTitleChange = viewModel::updateFormTitle,
-                        onUsernameChange = viewModel::updateFormUsername,
-                        onEmailChange = viewModel::updateFormEmail,
-                        onPasswordChange = viewModel::updateFormPassword,
-                        onUrlChange = viewModel::updateFormUrl,
-                        onCategoryChange = viewModel::updateFormCategory,
-                        onNotesChange = viewModel::updateFormNotes,
-                        onFavoriteChange = viewModel::updateFormFavorite,
-                        onSave = viewModel::saveForm,
-                        onSaveSuccess = {
-                            viewModel.resetSaveSuccess()
-                            navController.navigate(CredentialRoutes.HOME) {
-                                popUpTo(CredentialRoutes.HOME) { inclusive = true }
-                            }
-                        },
-                    )
-                }
-
-                composable(CredentialRoutes.SETTINGS) {
-                    val context = androidx.compose.ui.platform.LocalContext.current
-                    com.dev.trackone.feature.credential.presentation.screen.CredentialSettingsScreen(
-                        onExportCsv = { uri -> viewModel.exportCsv(uri, context) }
                     )
                 }
 
@@ -200,15 +221,15 @@ fun CredentialNavigation() {
                 TrackOneBottomBar(
                     items = credentialBottomNavItems,
                     selectedRoute = currentRoute,
+                    onSwipeLeft = onSwipeLeft,
+                    onSwipeRight = onSwipeRight,
                     onItemSelected = { item ->
-                        if (item.route != currentRoute) {
+                        val index = credentialBottomNavItems.indexOfFirst { it.route == item.route }
+                        if (index >= 0) {
                             if (item.route == CredentialRoutes.ADD) {
                                 viewModel.initAddForm()
                             }
-                            navController.navigate(item.route) {
-                                popUpTo(CredentialRoutes.HOME) { inclusive = false }
-                                launchSingleTop = true
-                            }
+                            coroutineScope.launch { pagerState.animateScrollToPage(index) }
                         }
                     },
                     modifier = Modifier.align(Alignment.BottomCenter),

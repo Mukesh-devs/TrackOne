@@ -17,8 +17,9 @@ class CredentialModuleEntry @Inject constructor() : ModuleEntry {
     override val icon: ImageVector = Icons.Default.VpnKey
     override val order: Int = 2
 
+    @androidx.compose.material3.ExperimentalMaterial3Api
     @Composable
-    override fun Content() {
-        CredentialNavigation()
+    override fun Content(onSwipeLeft: () -> Unit, onSwipeRight: () -> Unit) {
+        CredentialNavigation(onSwipeLeft = onSwipeLeft, onSwipeRight = onSwipeRight)
     }
 }

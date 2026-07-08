@@ -29,9 +29,8 @@ interface ModuleEntry {
     val order: Int
 
     /**
-     * The module's root Composable content.
-     * Each module provides its own internal navigation (NavHost + BottomNavigation).
+     * Composable content for the module.
      */
     @Composable
-    fun Content()
+    fun Content(onSwipeLeft: () -> Unit, onSwipeRight: () -> Unit)
 }

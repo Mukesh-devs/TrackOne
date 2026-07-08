@@ -112,6 +112,15 @@ class ExpenseViewModel @Inject constructor(
         loadData()
     }
 
+    fun refresh() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isRefreshing = true) }
+            kotlinx.coroutines.delay(800) // Fake delay for UX
+            loadData()
+            _uiState.update { it.copy(isRefreshing = false) }
+        }
+    }
+
     fun getDateLabel(): String {
         val state = _uiState.value
         return when (state.selectedPeriod) {

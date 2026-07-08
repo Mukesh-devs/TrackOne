@@ -103,6 +103,14 @@ class ExpiryViewModel @Inject constructor(
 
     // ========== Selection ==========
 
+    fun refresh() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isRefreshing = true) }
+            kotlinx.coroutines.delay(800) // Fake delay for UX
+            _uiState.update { it.copy(isRefreshing = false) }
+        }
+    }
+
     fun selectGroup(group: ExpiryGroup) {
         _uiState.update { it.copy(selectedGroup = group) }
     }
