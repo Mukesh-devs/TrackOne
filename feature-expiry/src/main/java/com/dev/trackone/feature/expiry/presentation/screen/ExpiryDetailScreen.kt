@@ -4,6 +4,7 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -12,8 +13,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.background
+import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -22,6 +26,13 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.Event
+import androidx.compose.material.icons.filled.AttachMoney
+import androidx.compose.material.icons.filled.Notes
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -118,95 +129,177 @@ private fun ExpiryDetailCard(
     onCopy: (String, String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    TrackOneCard(modifier = modifier) {
+    androidx.compose.material3.Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
+        colors = androidx.compose.material3.CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface,
+        ),
+        elevation = androidx.compose.material3.CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
         var passwordVisible by remember { mutableStateOf(false) }
+        val isExpired = DateUtils.isExpired(item.expiryDate)
+        
+        Column(modifier = Modifier.padding(16.dp)) {
+            // Header: Title and Actions
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top,
+            ) {
+                Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
+                    if (item.label.isNotBlank()) {
+                        Text(
+                            text = item.label,
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                    if (item.provider.isNotBlank()) {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = item.provider,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
+                Row(
+                    modifier = Modifier.background(
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                        shape = androidx.compose.foundation.shape.RoundedCornerShape(50)
+                    )
+                ) {
+                    IconButton(onClick = onEdit, modifier = Modifier.size(36.dp)) {
+                        Icon(
+                            imageVector = Icons.Default.Edit,
+                            contentDescription = "Edit",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                    IconButton(onClick = onDelete, modifier = Modifier.size(36.dp)) {
+                        Icon(
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = "Delete",
+                            tint = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
+            }
 
-        // Title and actions
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                if (item.label.isNotBlank()) {
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            // Status Badge
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                Box(
+                    modifier = Modifier
+                        .background(
+                            color = if (isExpired) MaterialTheme.colorScheme.errorContainer else Color(0xFFE8F5E9),
+                            shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp)
+                        )
+                        .padding(horizontal = 12.dp, vertical = 6.dp)
+                ) {
                     Text(
-                        text = item.label,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
+                        text = DateUtils.getExpiryLabel(item.expiryDate),
+                        color = if (isExpired) MaterialTheme.colorScheme.onErrorContainer else Color(0xFF2E7D32),
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold
                     )
                 }
+            }
+            
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Info Grid
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                        shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
+                    )
+                    .padding(12.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                DetailRow(
+                    icon = Icons.Default.DateRange,
+                    label = "Purchased",
+                    value = DateUtils.formatDate(item.purchasedDate)
+                )
+                
+                DetailRow(
+                    icon = Icons.Default.Event,
+                    label = "Expires",
+                    value = DateUtils.formatDate(item.expiryDate),
+                    valueColor = if (isExpired) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
+                )
+
+                item.amount?.let { amount ->
+                    DetailRow(
+                        icon = Icons.Default.AttachMoney,
+                        label = "Amount",
+                        value = CurrencyUtils.formatAmount(amount)
+                    )
+                }
+                
+                if (!item.notes.isNullOrBlank()) {
+                    DetailRow(
+                        icon = Icons.Default.Notes,
+                        label = "Notes",
+                        value = item.notes
+                    )
+                }
+            }
+
+            // Credentials Section
+            if (!item.username.isNullOrBlank() || !item.email.isNullOrBlank() || !item.password.isNullOrBlank()) {
+                Spacer(modifier = Modifier.height(16.dp))
                 Text(
-                    text = item.provider,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    text = "Credentials",
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(bottom = 8.dp, start = 4.dp)
                 )
-            }
-            Row {
-                IconButton(onClick = onEdit) {
-                    Icon(
-                        imageVector = Icons.Default.Edit,
-                        contentDescription = "Edit",
-                        tint = MaterialTheme.colorScheme.primary,
-                    )
+                
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(
+                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f),
+                            shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
+                        )
+                        .padding(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    item.username?.takeIf { it.isNotBlank() }?.let { username ->
+                        CopyableRow(
+                            icon = Icons.Default.Person,
+                            label = "Username",
+                            value = username
+                        ) { onCopy(username, "Username") }
+                    }
+                    item.email?.takeIf { it.isNotBlank() }?.let { email ->
+                        CopyableRow(
+                            icon = Icons.Default.Email,
+                            label = "Email",
+                            value = email
+                        ) { onCopy(email, "Email") }
+                    }
+                    item.password?.takeIf { it.isNotBlank() }?.let { password ->
+                        PasswordToggleRow(
+                            icon = Icons.Default.Lock,
+                            password = password,
+                            passwordVisible = passwordVisible,
+                            onToggleVisibility = { passwordVisible = !passwordVisible },
+                            onCopy = { onCopy(password, "Password") },
+                        )
+                    }
                 }
-                IconButton(onClick = onDelete) {
-                    Icon(
-                        imageVector = Icons.Default.Delete,
-                        contentDescription = "Delete",
-                        tint = MaterialTheme.colorScheme.error,
-                    )
-                }
-            }
-        }
-
-        HorizontalDivider(
-            modifier = Modifier.padding(vertical = Dimens.SpacingSm),
-            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
-        )
-
-        // Dates
-        DetailRow("Purchased", DateUtils.formatDate(item.purchasedDate))
-        DetailRow(
-            label = "Expires",
-            value = DateUtils.formatDate(item.expiryDate),
-            valueColor = if (DateUtils.isExpired(item.expiryDate)) {
-                MaterialTheme.colorScheme.error
-            } else {
-                MaterialTheme.colorScheme.onSurface
-            },
-        )
-        DetailRow("Status", DateUtils.getExpiryLabel(item.expiryDate))
-
-        // Amount
-        item.amount?.let { amount ->
-            DetailRow("Amount", CurrencyUtils.formatAmount(amount))
-        }
-
-        // Notes
-        if (!item.notes.isNullOrBlank()) {
-            DetailRow("Notes", item.notes)
-        }
-
-        // Credentials
-        if (!item.username.isNullOrBlank() || !item.email.isNullOrBlank() || !item.password.isNullOrBlank()) {
-            HorizontalDivider(
-                modifier = Modifier.padding(vertical = Dimens.SpacingSm),
-                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
-            )
-
-            item.username?.takeIf { it.isNotBlank() }?.let { username ->
-                CopyableRow("Username", username) { onCopy(username, "Username") }
-            }
-            item.email?.takeIf { it.isNotBlank() }?.let { email ->
-                CopyableRow("Email", email) { onCopy(email, "Email") }
-            }
-            item.password?.takeIf { it.isNotBlank() }?.let { password ->
-                PasswordToggleRow(
-                    password = password,
-                    passwordVisible = passwordVisible,
-                    onToggleVisibility = { passwordVisible = !passwordVisible },
-                    onCopy = { onCopy(password, "Password") },
-                )
             }
         }
     }
@@ -214,66 +307,84 @@ private fun ExpiryDetailCard(
 
 @Composable
 private fun DetailRow(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
     label: String,
     value: String,
     valueColor: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.onSurface,
 ) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 2.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(20.dp)
         )
-        Text(
-            text = value,
-            style = MaterialTheme.typography.bodyMedium,
-            color = valueColor,
-        )
+        Spacer(modifier = Modifier.width(12.dp))
+        Column {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(
+                text = value,
+                style = MaterialTheme.typography.bodyMedium,
+                color = valueColor,
+                fontWeight = FontWeight.Medium
+            )
+        }
     }
 }
 
 @Composable
 private fun PasswordToggleRow(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
     password: String,
     passwordVisible: Boolean,
     onToggleVisibility: () -> Unit,
     onCopy: () -> Unit,
 ) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 2.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(
-            text = "Password",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(20.dp)
         )
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Spacer(modifier = Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = "Password",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
             Text(
                 text = if (passwordVisible) password else "••••••••",
                 style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium
             )
-            Spacer(modifier = Modifier.width(Dimens.SpacingXs))
-            IconButton(onClick = onToggleVisibility) {
+        }
+        Row {
+            IconButton(onClick = onToggleVisibility, modifier = Modifier.size(32.dp)) {
                 Icon(
                     imageVector = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
                     contentDescription = if (passwordVisible) "Hide password" else "Show password",
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(20.dp)
                 )
             }
-            IconButton(onClick = onCopy) {
+            IconButton(onClick = onCopy, modifier = Modifier.size(32.dp)) {
                 Icon(
                     imageVector = Icons.Default.ContentCopy,
                     contentDescription = "Copy Password",
                     tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(20.dp)
                 )
             }
         }
@@ -282,35 +393,41 @@ private fun PasswordToggleRow(
 
 @Composable
 private fun CopyableRow(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
     label: String,
     value: String,
     onCopy: () -> Unit,
 ) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 2.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(20.dp)
         )
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Spacer(modifier = Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
             Text(
                 text = value,
                 style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium
             )
-            Spacer(modifier = Modifier.width(Dimens.SpacingXs))
-            IconButton(onClick = onCopy) {
-                Icon(
-                    imageVector = Icons.Default.ContentCopy,
-                    contentDescription = "Copy $label",
-                    tint = MaterialTheme.colorScheme.primary,
-                )
-            }
+        }
+        IconButton(onClick = onCopy, modifier = Modifier.size(32.dp)) {
+            Icon(
+                imageVector = Icons.Default.ContentCopy,
+                contentDescription = "Copy $label",
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(20.dp)
+            )
         }
     }
 }
