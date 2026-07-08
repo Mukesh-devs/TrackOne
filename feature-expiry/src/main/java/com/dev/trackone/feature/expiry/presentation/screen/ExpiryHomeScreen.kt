@@ -183,11 +183,10 @@ fun ExpiryGroupCard(
     val daysLeft = DateUtils.daysUntil(effectiveExpiry)
     val isExpired = daysLeft < 0
 
-    val urgencyColor = when {
-        isExpired -> MaterialTheme.colorScheme.error
-        daysLeft in 0..10 -> MaterialTheme.colorScheme.error // Urgent
-        daysLeft in 11..30 -> MaterialTheme.colorScheme.tertiary // Approaching
-        else -> MaterialTheme.colorScheme.primary // Safe
+    val urgencyColor = if (isExpired || daysLeft < 7) {
+        androidx.compose.ui.graphics.Color(0xFFD32F2F) // Red
+    } else {
+        androidx.compose.ui.graphics.Color(0xFF388E3C) // Green
     }
 
     val totalDuration = effectiveExpiry - nearestItem.purchasedDate
