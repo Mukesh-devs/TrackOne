@@ -3,6 +3,7 @@ package com.dev.trackone.feature.expense.presentation.screen
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.border
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -261,8 +262,16 @@ private fun ExpenseItemCard(
     modifier: Modifier = Modifier,
 ) {
     TrackOneCard(
-        modifier = modifier.clickable(onClick = onClick),
-        elevation = 4.dp,
+        modifier = modifier
+            .border(
+                width = 1.dp,
+                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.15f),
+                shape = androidx.compose.foundation.shape.RoundedCornerShape(20.dp)
+            )
+            .clickable(onClick = onClick),
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(20.dp),
+        containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f),
+        elevation = 0.dp,
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),

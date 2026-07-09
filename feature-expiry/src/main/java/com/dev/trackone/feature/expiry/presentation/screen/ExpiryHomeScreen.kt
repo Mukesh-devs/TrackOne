@@ -24,6 +24,7 @@ import androidx.compose.material.icons.filled.Inbox
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.border
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.outlined.Timer
 import androidx.compose.material3.Badge
@@ -219,8 +220,15 @@ fun ExpiryGroupCard(
 
     TrackOneCard(
         onClick = onClick,
-        modifier = modifier,
+        modifier = modifier
+            .border(
+                width = 1.dp,
+                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.15f),
+                shape = androidx.compose.foundation.shape.RoundedCornerShape(20.dp)
+            ),
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(20.dp),
         containerColor = cardBackgroundColor,
+        elevation = 0.dp,
     ) {
         Column(
             modifier = Modifier.fillMaxWidth()

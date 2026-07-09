@@ -5,6 +5,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -170,15 +171,15 @@ private fun CredentialGroupCard(
 ) {
     TrackOneCard(
         modifier = modifier
-            .shadow(
-                elevation = 8.dp,
-                shape = MaterialTheme.shapes.large,
-                ambientColor = Color.Black.copy(alpha = 0.1f),
-                spotColor = Color.Black.copy(alpha = 0.1f)
+            .border(
+                width = 1.dp,
+                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.15f),
+                shape = androidx.compose.foundation.shape.RoundedCornerShape(20.dp)
             )
             .clickable { onClick() },
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(20.dp),
         containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f),
-        elevation = 0.dp
+        elevation = 0.dp,
     ) {
         Row(
             modifier = Modifier

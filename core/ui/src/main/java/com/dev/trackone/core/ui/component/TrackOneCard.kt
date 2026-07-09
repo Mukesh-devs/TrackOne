@@ -24,6 +24,7 @@ fun TrackOneCard(
     onClick: (() -> Unit)? = null,
     containerColor: androidx.compose.ui.graphics.Color? = null,
     elevation: androidx.compose.ui.unit.Dp = Dimens.CardElevation,
+    shape: androidx.compose.ui.graphics.Shape = MaterialTheme.shapes.large,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     if (onClick != null) {
@@ -37,7 +38,7 @@ fun TrackOneCard(
                         stiffness = Spring.StiffnessLow,
                     ),
                 ),
-            shape = MaterialTheme.shapes.large,
+            shape = shape,
             colors = CardDefaults.cardColors(
                 containerColor = containerColor ?: MaterialTheme.colorScheme.surfaceVariant,
             ),
@@ -60,7 +61,7 @@ fun TrackOneCard(
                         stiffness = Spring.StiffnessLow,
                     ),
                 ),
-            shape = MaterialTheme.shapes.large,
+            shape = shape,
             colors = CardDefaults.cardColors(
                 containerColor = containerColor ?: MaterialTheme.colorScheme.surfaceVariant,
             ),
