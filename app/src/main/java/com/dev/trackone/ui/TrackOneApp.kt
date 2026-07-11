@@ -64,6 +64,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.material3.Button
 import androidx.compose.material.icons.filled.Swipe
 import com.dev.trackone.core.ui.theme.Dimens
+import androidx.compose.foundation.layout.statusBarsPadding
 
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -181,7 +182,7 @@ fun TrackOneApp(
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(innerPadding),
+                        .padding(bottom = innerPadding.calculateBottomPadding()),
                 ) {
                     // Module indicator header
                     com.dev.trackone.core.ui.theme.DynamicModuleTheme(moduleTitle = currentModuleTitle) {
@@ -337,6 +338,7 @@ private fun ModuleIndicator(
     Column(
         modifier = modifier
             .background(MaterialTheme.colorScheme.primary)
+            .statusBarsPadding()
             .padding(top = Dimens.SpacingSm, bottom = Dimens.SpacingSm), // Reduced top padding
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
