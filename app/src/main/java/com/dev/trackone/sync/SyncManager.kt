@@ -6,6 +6,8 @@ import com.dev.trackone.feature.expense.data.local.ExpenseDao
 import com.dev.trackone.feature.expiry.data.local.ExpiryDao
 import com.google.android.gms.auth.api.signin.GoogleSignInAccount
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.withContext
 
 /**
@@ -82,6 +84,31 @@ class SyncManager(
         } catch (e: Exception) {
             e.printStackTrace()
             null
+        }
+    }
+
+    /**
+     * Gets the latest updatedAt timestamp across all 3 modules.
+     * Returns 0L if all tables are empty.
+     */
+    suspend fun getLatestDataEditTime(): Long = withContext(Dispatchers.IO) {
+        val expiryLatest = expiryDao.getLatestUpdatedAt() ?: 0L
+        val expenseLatest = expenseDao.getLatestUpdatedAt() ?: 0L
+        val credentialLatest = credentialDao.getLatestUpdatedAt() ?: 0L
+        maxOf(expiryLatest, expenseLatest, credentialLatest)
+    }
+
+    /**
+     * Observes the latest updatedAt timestamp across all 3 modules in real-time.
+     * Emits whenever any table is modified.
+     */
+    fun observeLatestDataEditTime(): Flow<Long> {
+        return combine(
+            expiryDao.observeLatestUpdatedAt(),
+            expenseDao.observeLatestUpdatedAt(),
+            credentialDao.observeLatestUpdatedAt()
+        ) { expiry, expense, credential ->
+            maxOf(expiry ?: 0L, expense ?: 0L, credential ?: 0L)
         }
     }
 }

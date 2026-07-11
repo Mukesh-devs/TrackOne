@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
@@ -23,7 +24,8 @@ private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(
 
 data class UserPreferences(
     val hasSeenOnboarding: Boolean,
-    val hasSeenTour: Boolean
+    val hasSeenTour: Boolean,
+    val lastBackupTimestamp: Long = 0L
 )
 
 @Singleton
@@ -34,6 +36,7 @@ class UserPreferencesRepository @Inject constructor(
     private object PreferencesKeys {
         val HAS_SEEN_ONBOARDING = booleanPreferencesKey("has_seen_onboarding")
         val HAS_SEEN_TOUR = booleanPreferencesKey("has_seen_tour")
+        val LAST_BACKUP_TIMESTAMP = longPreferencesKey("last_backup_timestamp")
     }
 
     val userPreferencesFlow: Flow<UserPreferences> = context.dataStore.data
@@ -46,7 +49,8 @@ class UserPreferencesRepository @Inject constructor(
         }.map { preferences ->
             val hasSeenOnboarding = preferences[PreferencesKeys.HAS_SEEN_ONBOARDING] ?: false
             val hasSeenTour = preferences[PreferencesKeys.HAS_SEEN_TOUR] ?: false
-            UserPreferences(hasSeenOnboarding, hasSeenTour)
+            val lastBackupTimestamp = preferences[PreferencesKeys.LAST_BACKUP_TIMESTAMP] ?: 0L
+            UserPreferences(hasSeenOnboarding, hasSeenTour, lastBackupTimestamp)
         }
 
     suspend fun completeOnboarding() {
@@ -58,6 +62,12 @@ class UserPreferencesRepository @Inject constructor(
     suspend fun completeTour() {
         context.dataStore.edit { preferences ->
             preferences[PreferencesKeys.HAS_SEEN_TOUR] = true
+        }
+    }
+
+    suspend fun setLastBackupTimestamp(timestamp: Long) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.LAST_BACKUP_TIMESTAMP] = timestamp
         }
     }
 }

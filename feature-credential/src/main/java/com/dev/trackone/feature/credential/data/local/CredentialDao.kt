@@ -32,6 +32,12 @@ interface CredentialDao {
     @Query("DELETE FROM credential_items")
     suspend fun deleteAll()
 
+    @Query("SELECT MAX(updatedAt) FROM credential_items")
+    suspend fun getLatestUpdatedAt(): Long?
+
+    @Query("SELECT MAX(updatedAt) FROM credential_items")
+    fun observeLatestUpdatedAt(): Flow<Long?>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAll(entities: List<CredentialEntity>)
 

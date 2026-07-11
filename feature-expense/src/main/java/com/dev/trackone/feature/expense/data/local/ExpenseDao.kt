@@ -32,6 +32,12 @@ interface ExpenseDao {
     @Query("DELETE FROM expense_items")
     suspend fun deleteAll()
 
+    @Query("SELECT MAX(updatedAt) FROM expense_items")
+    suspend fun getLatestUpdatedAt(): Long?
+
+    @Query("SELECT MAX(updatedAt) FROM expense_items")
+    fun observeLatestUpdatedAt(): Flow<Long?>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAll(entities: List<ExpenseEntity>)
 

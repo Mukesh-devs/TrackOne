@@ -84,10 +84,43 @@ class MainViewModel @Inject constructor(
     private val _syncUiState = MutableStateFlow<SyncUiState>(SyncUiState.NotSignedIn)
     val syncUiState: StateFlow<SyncUiState> = _syncUiState.asStateFlow()
 
+    /**
+     * Whether local data has changes not yet backed up.
+     * true = backup pending (local edits are newer than last backup)
+     * false = synced (backup is up to date)
+     * null = unknown / not signed in / no data
+     */
+    private val _isBackupPending = MutableStateFlow<Boolean?>(null)
+    val isBackupPending: StateFlow<Boolean?> = _isBackupPending.asStateFlow()
+
+    private val _isSignedIn = MutableStateFlow(false)
+    val isSignedIn: StateFlow<Boolean> = _isSignedIn.asStateFlow()
+
     private var currentAccount: GoogleSignInAccount? = null
+
+    init {
+        // Observe both data edits AND backup timestamp changes in real-time
+        viewModelScope.launch {
+            kotlinx.coroutines.flow.combine(
+                syncManager.observeLatestDataEditTime(),
+                userPreferencesRepository.userPreferencesFlow
+            ) { latestEditTime, prefs ->
+                val lastBackupTimestamp = prefs.lastBackupTimestamp
+                when {
+                    lastBackupTimestamp == 0L && latestEditTime == 0L -> null
+                    lastBackupTimestamp == 0L -> true
+                    latestEditTime > lastBackupTimestamp -> true
+                    else -> false
+                }
+            }.collect { pending ->
+                _isBackupPending.value = pending
+            }
+        }
+    }
 
     fun onSignedIn(account: GoogleSignInAccount) {
         currentAccount = account
+        _isSignedIn.value = true
         _syncUiState.value = SyncUiState.Loading
         viewModelScope.launch {
             val lastBackupTime = syncManager.getLastBackupTime(account)
@@ -100,6 +133,7 @@ class MainViewModel @Inject constructor(
 
     fun onSignOut() {
         currentAccount = null
+        _isSignedIn.value = false
         _syncUiState.value = SyncUiState.NotSignedIn
     }
 
@@ -109,6 +143,9 @@ class MainViewModel @Inject constructor(
         viewModelScope.launch {
             val result = syncManager.backup(account)
             if (result.isSuccess) {
+                // Save the backup timestamp locally
+                val now = System.currentTimeMillis()
+                userPreferencesRepository.setLastBackupTimestamp(now)
                 _syncUiState.value = SyncUiState.Success("Backup successful!")
             } else {
                 _syncUiState.value = SyncUiState.Error(result.exceptionOrNull()?.message ?: "Backup failed")
@@ -122,6 +159,9 @@ class MainViewModel @Inject constructor(
         viewModelScope.launch {
             val result = syncManager.restore(account)
             if (result.isSuccess) {
+                // After restore, data matches backup, so mark as synced
+                val now = System.currentTimeMillis()
+                userPreferencesRepository.setLastBackupTimestamp(now)
                 _syncUiState.value = SyncUiState.Success("Restore successful!")
             } else {
                 _syncUiState.value = SyncUiState.Error(result.exceptionOrNull()?.message ?: "Restore failed")
@@ -129,6 +169,10 @@ class MainViewModel @Inject constructor(
         }
     }
     
+    /**
+     * Resets the sync UI back to the signed-in state (with backup/restore buttons).
+     * Called when the bottom sheet is dismissed after a Success/Error.
+     */
     fun resetSyncState() {
         if (currentAccount != null) {
             onSignedIn(currentAccount!!)

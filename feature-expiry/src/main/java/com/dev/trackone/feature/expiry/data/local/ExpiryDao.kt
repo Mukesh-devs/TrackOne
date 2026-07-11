@@ -32,6 +32,12 @@ interface ExpiryDao {
     @Query("DELETE FROM expiry_items")
     suspend fun deleteAll()
 
+    @Query("SELECT MAX(updatedAt) FROM expiry_items")
+    suspend fun getLatestUpdatedAt(): Long?
+
+    @Query("SELECT MAX(updatedAt) FROM expiry_items")
+    fun observeLatestUpdatedAt(): Flow<Long?>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAll(entities: List<ExpiryEntity>)
 

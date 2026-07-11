@@ -43,6 +43,9 @@ import androidx.compose.material3.rememberDrawerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.outlined.Cloud
+import androidx.compose.material.icons.outlined.CloudDone
+import androidx.compose.material.icons.outlined.CloudOff
+import androidx.compose.material.icons.outlined.CloudUpload
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
@@ -107,6 +110,8 @@ fun TrackOneApp(
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val coroutineScope = rememberCoroutineScope()
     val syncUiState by viewModel.syncUiState.collectAsStateWithLifecycle()
+    val isBackupPending by viewModel.isBackupPending.collectAsStateWithLifecycle()
+    val isSignedIn by viewModel.isSignedIn.collectAsStateWithLifecycle()
 
     val currentModuleTitle = if (currentModuleIndex in modules.indices) modules[currentModuleIndex].title else ""
     
@@ -185,6 +190,8 @@ fun TrackOneApp(
                             currentPage = currentModuleIndex,
                             onMenuClick = { coroutineScope.launch { drawerState.open() } },
                             onCloudClick = { showSyncSheet = true },
+                            isBackupPending = isBackupPending,
+                            isSignedIn = isSignedIn,
                             modifier = Modifier.fillMaxWidth(),
                         )
                     }
@@ -238,7 +245,10 @@ fun TrackOneApp(
     
     if (showSyncSheet) {
         CloudSyncBottomSheet(
-            onDismissRequest = { showSyncSheet = false },
+            onDismissRequest = {
+                showSyncSheet = false
+                viewModel.resetSyncState()
+            },
             sheetState = syncSheetState,
             uiState = syncUiState,
             onSignInClick = onSignInClick,
@@ -320,6 +330,8 @@ private fun ModuleIndicator(
     currentPage: Int,
     onMenuClick: () -> Unit,
     onCloudClick: () -> Unit,
+    isBackupPending: Boolean?,
+    isSignedIn: Boolean,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -372,9 +384,23 @@ private fun ModuleIndicator(
         } // Close AnimatedVisibility
             
             IconButton(onClick = onCloudClick) {
+                val cloudIcon = if (!isSignedIn) {
+                    Icons.Outlined.CloudOff
+                } else when (isBackupPending) {
+                    true -> Icons.Outlined.CloudUpload
+                    false -> Icons.Outlined.CloudDone
+                    null -> Icons.Outlined.Cloud
+                }
+                val cloudDesc = if (!isSignedIn) {
+                    "Not Signed In"
+                } else when (isBackupPending) {
+                    true -> "Backup Pending"
+                    false -> "Synced"
+                    null -> "Cloud Sync"
+                }
                 Icon(
-                    imageVector = Icons.Outlined.Cloud,
-                    contentDescription = "Cloud Sync",
+                    imageVector = cloudIcon,
+                    contentDescription = cloudDesc,
                     tint = MaterialTheme.colorScheme.onPrimary
                 )
             }
