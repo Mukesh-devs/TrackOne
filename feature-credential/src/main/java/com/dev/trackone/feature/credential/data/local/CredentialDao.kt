@@ -26,6 +26,15 @@ interface CredentialDao {
     @Query("DELETE FROM credential_items WHERE id = :id")
     suspend fun deleteById(id: Long)
 
+    @Query("SELECT * FROM credential_items")
+    suspend fun getAllOnce(): List<CredentialEntity>
+
+    @Query("DELETE FROM credential_items")
+    suspend fun deleteAll()
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAll(entities: List<CredentialEntity>)
+
     @Query("SELECT * FROM credential_items ORDER BY title ASC")
     fun getAll(): Flow<List<CredentialEntity>>
 

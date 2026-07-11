@@ -26,6 +26,15 @@ interface ExpenseDao {
     @Query("DELETE FROM expense_items WHERE id = :id")
     suspend fun deleteById(id: Long)
 
+    @Query("SELECT * FROM expense_items")
+    suspend fun getAllOnce(): List<ExpenseEntity>
+
+    @Query("DELETE FROM expense_items")
+    suspend fun deleteAll()
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAll(entities: List<ExpenseEntity>)
+
     @Query("SELECT * FROM expense_items ORDER BY date DESC")
     fun getAll(): Flow<List<ExpenseEntity>>
 

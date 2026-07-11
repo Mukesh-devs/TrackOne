@@ -62,14 +62,21 @@ import androidx.compose.material3.Button
 import androidx.compose.material.icons.filled.Swipe
 import com.dev.trackone.core.ui.theme.Dimens
 
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.rememberModalBottomSheetState
+import com.dev.trackone.ui.sync.CloudSyncBottomSheet
+
 /**
  * Root composable for TrackOne.
  * Hosts a HorizontalPager that lets users swipe between feature modules.
  * Each page is a full-screen module with its own internal navigation.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TrackOneApp(
     viewModel: MainViewModel,
+    onSignInClick: () -> Unit = {},
+    onSignOutClick: () -> Unit = {}
 ) {
     val modules = viewModel.modules
 
@@ -89,6 +96,8 @@ fun TrackOneApp(
     }
 
     var currentModuleIndex by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(0) }
+    var showSyncSheet by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    val syncSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     // Sync state with ViewModel
     LaunchedEffect(currentModuleIndex) {
@@ -97,6 +106,7 @@ fun TrackOneApp(
 
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val coroutineScope = rememberCoroutineScope()
+    val syncUiState by viewModel.syncUiState.collectAsStateWithLifecycle()
 
     val currentModuleTitle = if (currentModuleIndex in modules.indices) modules[currentModuleIndex].title else ""
     
@@ -174,7 +184,7 @@ fun TrackOneApp(
                             modules = modules,
                             currentPage = currentModuleIndex,
                             onMenuClick = { coroutineScope.launch { drawerState.open() } },
-                            onCloudClick = { /* Will implement in future */ },
+                            onCloudClick = { showSyncSheet = true },
                             modifier = Modifier.fillMaxWidth(),
                         )
                     }
@@ -224,6 +234,18 @@ fun TrackOneApp(
                 }
             }
         }
+    }
+    
+    if (showSyncSheet) {
+        CloudSyncBottomSheet(
+            onDismissRequest = { showSyncSheet = false },
+            sheetState = syncSheetState,
+            uiState = syncUiState,
+            onSignInClick = onSignInClick,
+            onSignOutClick = onSignOutClick,
+            onBackupClick = { viewModel.onBackup() },
+            onRestoreClick = { viewModel.onRestore() }
+        )
     }
 }
 

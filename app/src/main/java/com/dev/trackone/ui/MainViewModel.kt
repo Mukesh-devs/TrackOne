@@ -16,6 +16,10 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
+import com.dev.trackone.sync.SyncManager
+import com.dev.trackone.ui.sync.SyncUiState
+import com.google.android.gms.auth.api.signin.GoogleSignInAccount
+
 /**
  * Main ViewModel managing the module pager state and theme preference.
  * Collects all registered [ModuleEntry] instances via Hilt multibinding.
@@ -23,7 +27,8 @@ import kotlinx.coroutines.launch
 @HiltViewModel
 class MainViewModel @Inject constructor(
     moduleEntries: Set<@JvmSuppressWildcards ModuleEntry>,
-    private val userPreferencesRepository: UserPreferencesRepository
+    private val userPreferencesRepository: UserPreferencesRepository,
+    private val syncManager: SyncManager
 ) : ViewModel() {
 
     /**
@@ -71,6 +76,64 @@ class MainViewModel @Inject constructor(
     fun completeTour() {
         viewModelScope.launch {
             userPreferencesRepository.completeTour()
+        }
+    }
+
+    // --- Cloud Sync ---
+
+    private val _syncUiState = MutableStateFlow<SyncUiState>(SyncUiState.NotSignedIn)
+    val syncUiState: StateFlow<SyncUiState> = _syncUiState.asStateFlow()
+
+    private var currentAccount: GoogleSignInAccount? = null
+
+    fun onSignedIn(account: GoogleSignInAccount) {
+        currentAccount = account
+        _syncUiState.value = SyncUiState.Loading
+        viewModelScope.launch {
+            val lastBackupTime = syncManager.getLastBackupTime(account)
+            _syncUiState.value = SyncUiState.SignedIn(
+                accountEmail = account.email ?: "Unknown Email",
+                lastBackupTime = lastBackupTime
+            )
+        }
+    }
+
+    fun onSignOut() {
+        currentAccount = null
+        _syncUiState.value = SyncUiState.NotSignedIn
+    }
+
+    fun onBackup() {
+        val account = currentAccount ?: return
+        _syncUiState.value = SyncUiState.Loading
+        viewModelScope.launch {
+            val result = syncManager.backup(account)
+            if (result.isSuccess) {
+                _syncUiState.value = SyncUiState.Success("Backup successful!")
+            } else {
+                _syncUiState.value = SyncUiState.Error(result.exceptionOrNull()?.message ?: "Backup failed")
+            }
+        }
+    }
+
+    fun onRestore() {
+        val account = currentAccount ?: return
+        _syncUiState.value = SyncUiState.Loading
+        viewModelScope.launch {
+            val result = syncManager.restore(account)
+            if (result.isSuccess) {
+                _syncUiState.value = SyncUiState.Success("Restore successful!")
+            } else {
+                _syncUiState.value = SyncUiState.Error(result.exceptionOrNull()?.message ?: "Restore failed")
+            }
+        }
+    }
+    
+    fun resetSyncState() {
+        if (currentAccount != null) {
+            onSignedIn(currentAccount!!)
+        } else {
+            _syncUiState.value = SyncUiState.NotSignedIn
         }
     }
 }
