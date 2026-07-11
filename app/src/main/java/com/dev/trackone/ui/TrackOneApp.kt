@@ -125,7 +125,7 @@ fun TrackOneApp(
                     .fillMaxHeight()
                     .width(280.dp),
                 drawerShape = androidx.compose.foundation.shape.RoundedCornerShape(topEnd = 32.dp, bottomEnd = 32.dp),
-                drawerContainerColor = androidx.compose.ui.graphics.Color.White,
+                drawerContainerColor = MaterialTheme.colorScheme.surface,
                 drawerTonalElevation = 4.dp
             ) {
                 Spacer(modifier = Modifier.height(32.dp))
@@ -137,7 +137,7 @@ fun TrackOneApp(
                         "TrackOne",
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
-                        color = androidx.compose.ui.graphics.Color.Black
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 }
                 Spacer(modifier = Modifier.height(16.dp))
@@ -245,18 +245,20 @@ fun TrackOneApp(
     }
     
     if (showSyncSheet) {
-        CloudSyncBottomSheet(
-            onDismissRequest = {
-                showSyncSheet = false
-                viewModel.resetSyncState()
-            },
-            sheetState = syncSheetState,
-            uiState = syncUiState,
-            onSignInClick = onSignInClick,
-            onSignOutClick = onSignOutClick,
-            onBackupClick = { viewModel.onBackup() },
-            onRestoreClick = { viewModel.onRestore() }
-        )
+        com.dev.trackone.core.ui.theme.DynamicModuleTheme(moduleTitle = currentModuleTitle) {
+            CloudSyncBottomSheet(
+                onDismissRequest = {
+                    showSyncSheet = false
+                    viewModel.resetSyncState()
+                },
+                sheetState = syncSheetState,
+                uiState = syncUiState,
+                onSignInClick = onSignInClick,
+                onSignOutClick = onSignOutClick,
+                onBackupClick = { viewModel.onBackup() },
+                onRestoreClick = { viewModel.onRestore() }
+            )
+        }
     }
 }
 
