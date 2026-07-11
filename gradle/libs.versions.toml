@@ -18,11 +18,13 @@ room = "2.6.1"
 coroutines = "1.9.0"
 coreSplashscreen = "1.0.1"
 datastorePreferences = "1.1.1"
+biometric = "1.1.0"
 
 [libraries]
 # AndroidX Core
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
+androidx-biometric = { group = "androidx.biometric", name = "biometric", version.ref = "biometric" }
 
 # Compose BOM
 compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "composeBom" }

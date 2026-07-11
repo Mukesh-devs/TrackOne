@@ -42,6 +42,7 @@ import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.Cloud
 import androidx.compose.material.icons.outlined.CloudDone
 import androidx.compose.material.icons.outlined.CloudOff
@@ -54,6 +55,9 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -113,6 +117,7 @@ fun TrackOneApp(
     val syncUiState by viewModel.syncUiState.collectAsStateWithLifecycle()
     val isBackupPending by viewModel.isBackupPending.collectAsStateWithLifecycle()
     val isSignedIn by viewModel.isSignedIn.collectAsStateWithLifecycle()
+    var showSettingsScreen by remember { mutableStateOf(false) }
 
     val currentModuleTitle = if (currentModuleIndex in modules.indices) modules[currentModuleIndex].title else ""
     
@@ -171,6 +176,34 @@ fun TrackOneApp(
                         shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp)
                     )
                 }
+
+                Spacer(modifier = Modifier.weight(1f))
+                androidx.compose.material3.HorizontalDivider(modifier = Modifier.padding(horizontal = 24.dp))
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                NavigationDrawerItem(
+                    label = { 
+                        Text(
+                            text = "Settings",
+                            fontWeight = androidx.compose.ui.text.font.FontWeight.Medium
+                        ) 
+                    },
+                    selected = false,
+                    icon = { Icon(Icons.Default.Settings, contentDescription = null) },
+                    onClick = {
+                        coroutineScope.launch {
+                            drawerState.close()
+                            showSettingsScreen = true
+                        }
+                    },
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp).padding(bottom = 24.dp),
+                    colors = androidx.compose.material3.NavigationDrawerItemDefaults.colors(
+                        unselectedContainerColor = androidx.compose.ui.graphics.Color.Transparent,
+                        unselectedIconColor = MaterialTheme.colorScheme.onSurface,
+                        unselectedTextColor = MaterialTheme.colorScheme.onSurface,
+                    ),
+                    shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp)
+                )
             }
             }
         }
@@ -259,6 +292,12 @@ fun TrackOneApp(
                 onRestoreClick = { viewModel.onRestore() }
             )
         }
+    }
+
+    if (showSettingsScreen) {
+        com.dev.trackone.ui.settings.SettingsScreen(
+            onNavigateBack = { showSettingsScreen = false }
+        )
     }
 }
 

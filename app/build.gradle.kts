@@ -76,6 +76,7 @@ dependencies {
     implementation(libs.material)
     implementation(libs.androidx.core.splashscreen)
     implementation(libs.androidx.datastore.preferences)
+    implementation(libs.androidx.biometric)
 
     // Compose
     implementation(platform(libs.compose.bom))

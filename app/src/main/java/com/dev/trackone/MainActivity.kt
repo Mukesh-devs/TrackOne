@@ -6,6 +6,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.dev.trackone.core.ui.theme.TrackOneTheme
@@ -20,12 +21,14 @@ import com.dev.trackone.sync.GoogleAuthHelper
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import javax.inject.Inject
 
+import androidx.fragment.app.FragmentActivity
+
 /**
  * Main (and only) Activity for TrackOne.
  * Uses edge-to-edge rendering and delegates all UI to Compose.
  */
 @AndroidEntryPoint
-class MainActivity : ComponentActivity() {
+class MainActivity : FragmentActivity() {
 
     private val viewModel: MainViewModel by viewModels()
     
@@ -63,6 +66,21 @@ class MainActivity : ComponentActivity() {
         setContent {
             val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
             val userPreferences by viewModel.userPreferences.collectAsStateWithLifecycle()
+            var isAuthenticated by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+
+            // Reset authentication when app goes to background
+            val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+            androidx.compose.runtime.DisposableEffect(lifecycleOwner) {
+                val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+                    if (event == androidx.lifecycle.Lifecycle.Event.ON_STOP) {
+                        isAuthenticated = false
+                    }
+                }
+                lifecycleOwner.lifecycle.addObserver(observer)
+                onDispose {
+                    lifecycleOwner.lifecycle.removeObserver(observer)
+                }
+            }
 
             TrackOneTheme(themeMode = themeMode) {
                 userPreferences?.let { prefs ->
@@ -73,17 +91,24 @@ class MainActivity : ComponentActivity() {
                             }
                         )
                     } else {
-                        TrackOneApp(
-                            viewModel = viewModel,
-                            onSignInClick = {
-                                signInLauncher.launch(googleAuthHelper.getSignInIntent())
-                            },
-                            onSignOutClick = {
-                                googleAuthHelper.signOut {
-                                    viewModel.onSignOut()
+                        com.dev.trackone.ui.lock.AuthGate(
+                            isAppLockEnabled = prefs.isAppLockEnabled,
+                            hashedPin = prefs.hashedPin,
+                            isAuthenticated = isAuthenticated,
+                            onUnlocked = { isAuthenticated = true }
+                        ) {
+                            TrackOneApp(
+                                viewModel = viewModel,
+                                onSignInClick = {
+                                    signInLauncher.launch(googleAuthHelper.getSignInIntent())
+                                },
+                                onSignOutClick = {
+                                    googleAuthHelper.signOut {
+                                        viewModel.onSignOut()
+                                    }
                                 }
-                            }
-                        )
+                            )
+                        }
                     }
                 }
             }
