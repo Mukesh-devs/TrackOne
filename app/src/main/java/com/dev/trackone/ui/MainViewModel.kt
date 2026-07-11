@@ -123,10 +123,11 @@ class MainViewModel @Inject constructor(
         _isSignedIn.value = true
         _syncUiState.value = SyncUiState.Loading
         viewModelScope.launch {
-            val lastBackupTime = syncManager.getLastBackupTime(account)
+            val backupMetadata = syncManager.getBackupMetadata(account)
             _syncUiState.value = SyncUiState.SignedIn(
                 accountEmail = account.email ?: "Unknown Email",
-                lastBackupTime = lastBackupTime
+                lastBackupTime = backupMetadata?.modifiedTime,
+                backupSizeBytes = backupMetadata?.sizeBytes
             )
         }
     }
@@ -142,13 +143,18 @@ class MainViewModel @Inject constructor(
         _syncUiState.value = SyncUiState.Loading
         viewModelScope.launch {
             val result = syncManager.backup(account)
+            val newMetadata = syncManager.getBackupMetadata(account)
+            val newSignedIn = SyncUiState.SignedIn(
+                accountEmail = account.email ?: "Unknown Email",
+                lastBackupTime = newMetadata?.modifiedTime,
+                backupSizeBytes = newMetadata?.sizeBytes
+            )
             if (result.isSuccess) {
-                // Save the backup timestamp locally
                 val now = System.currentTimeMillis()
                 userPreferencesRepository.setLastBackupTimestamp(now)
-                _syncUiState.value = SyncUiState.Success("Backup successful!")
+                _syncUiState.value = SyncUiState.Success("Backup successful!", newSignedIn)
             } else {
-                _syncUiState.value = SyncUiState.Error(result.exceptionOrNull()?.message ?: "Backup failed")
+                _syncUiState.value = SyncUiState.Error(result.exceptionOrNull()?.message ?: "Backup failed", newSignedIn)
             }
         }
     }
@@ -158,13 +164,18 @@ class MainViewModel @Inject constructor(
         _syncUiState.value = SyncUiState.Loading
         viewModelScope.launch {
             val result = syncManager.restore(account)
+            val newMetadata = syncManager.getBackupMetadata(account)
+            val newSignedIn = SyncUiState.SignedIn(
+                accountEmail = account.email ?: "Unknown Email",
+                lastBackupTime = newMetadata?.modifiedTime,
+                backupSizeBytes = newMetadata?.sizeBytes
+            )
             if (result.isSuccess) {
-                // After restore, data matches backup, so mark as synced
                 val now = System.currentTimeMillis()
                 userPreferencesRepository.setLastBackupTimestamp(now)
-                _syncUiState.value = SyncUiState.Success("Restore successful!")
+                _syncUiState.value = SyncUiState.Success("Restore successful!", newSignedIn)
             } else {
-                _syncUiState.value = SyncUiState.Error(result.exceptionOrNull()?.message ?: "Restore failed")
+                _syncUiState.value = SyncUiState.Error(result.exceptionOrNull()?.message ?: "Restore failed", newSignedIn)
             }
         }
     }

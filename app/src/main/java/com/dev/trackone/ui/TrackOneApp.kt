@@ -43,6 +43,7 @@ import androidx.compose.material3.rememberDrawerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material.icons.outlined.Cloud
 import androidx.compose.material.icons.outlined.CloudDone
 import androidx.compose.material.icons.outlined.CloudOff
@@ -118,6 +119,7 @@ fun TrackOneApp(
     val isBackupPending by viewModel.isBackupPending.collectAsStateWithLifecycle()
     val isSignedIn by viewModel.isSignedIn.collectAsStateWithLifecycle()
     var showSettingsScreen by remember { mutableStateOf(false) }
+    var showBackupScreen by remember { mutableStateOf(false) }
 
     val currentModuleTitle = if (currentModuleIndex in modules.indices) modules[currentModuleIndex].title else ""
     
@@ -296,7 +298,23 @@ fun TrackOneApp(
 
     if (showSettingsScreen) {
         com.dev.trackone.ui.settings.SettingsScreen(
-            onNavigateBack = { showSettingsScreen = false }
+            onNavigateBack = { showSettingsScreen = false },
+            onNavigateToBackup = { 
+                showSettingsScreen = false
+                showBackupScreen = true 
+            }
+        )
+    }
+
+    if (showBackupScreen) {
+        com.dev.trackone.ui.settings.BackupScreen(
+            syncUiState = syncUiState,
+            onBackupClick = { viewModel.onBackup() },
+            onRestoreClick = { viewModel.onRestore() },
+            onClose = { 
+                showBackupScreen = false 
+                showSettingsScreen = true
+            }
         )
     }
 }

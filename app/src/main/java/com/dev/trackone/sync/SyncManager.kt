@@ -75,12 +75,12 @@ class SyncManager(
     }
     
     /**
-     * Gets the last modified time of the backup in milliseconds.
+     * Gets the metadata of the backup.
      */
-    suspend fun getLastBackupTime(account: GoogleSignInAccount): Long? {
+    suspend fun getBackupMetadata(account: GoogleSignInAccount): BackupMetadata? {
         return try {
             val driveHelper = DriveServiceHelper(context, account)
-            driveHelper.getBackupLastModifiedTime()
+            driveHelper.getBackupMetadata()
         } catch (e: Exception) {
             e.printStackTrace()
             null

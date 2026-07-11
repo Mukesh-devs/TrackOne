@@ -213,8 +213,12 @@ fun CloudSyncBottomSheet(
 
 sealed class SyncUiState {
     object NotSignedIn : SyncUiState()
-    data class SignedIn(val accountEmail: String, val lastBackupTime: Long?) : SyncUiState()
+    data class SignedIn(
+        val accountEmail: String,
+        val lastBackupTime: Long?,
+        val backupSizeBytes: Long? = null
+    ) : SyncUiState()
     object Loading : SyncUiState()
-    data class Success(val message: String) : SyncUiState()
-    data class Error(val message: String) : SyncUiState()
+    data class Success(val message: String, val signedInState: SignedIn? = null) : SyncUiState()
+    data class Error(val message: String, val signedInState: SignedIn? = null) : SyncUiState()
 }

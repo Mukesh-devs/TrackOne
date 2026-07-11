@@ -88,20 +88,28 @@ class DriveServiceHelper(private val context: Context, private val account: Goog
     }
     
     /**
-     * Gets the last modified time of the backup file in milliseconds, or null if not found.
+     * Gets the metadata of the backup file (modified time and size), or null if not found.
      */
-    suspend fun getBackupLastModifiedTime(): Long? = withContext(Dispatchers.IO) {
+    suspend fun getBackupMetadata(): BackupMetadata? = withContext(Dispatchers.IO) {
         val fileList: FileList = driveService.files().list()
             .setSpaces("appDataFolder")
             .setQ("name='$BACKUP_FILE_NAME'")
-            .setFields("files(id, name, modifiedTime)")
+            .setFields("files(id, name, modifiedTime, size)")
             .execute()
             
         val file = fileList.files?.firstOrNull() ?: return@withContext null
-        file.modifiedTime?.value
+        BackupMetadata(
+            modifiedTime = file.modifiedTime?.value,
+            sizeBytes = file.getSize()
+        )
     }
 
     companion object {
         const val BACKUP_FILE_NAME = "trackone_backup.json"
     }
 }
+
+data class BackupMetadata(
+    val modifiedTime: Long?,
+    val sizeBytes: Long?
+)
