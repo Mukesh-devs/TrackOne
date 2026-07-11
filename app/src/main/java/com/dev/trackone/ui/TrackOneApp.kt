@@ -198,13 +198,32 @@ fun TrackOneApp(
                             showSettingsScreen = true
                         }
                     },
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp).padding(bottom = 24.dp),
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
                     colors = androidx.compose.material3.NavigationDrawerItemDefaults.colors(
                         unselectedContainerColor = androidx.compose.ui.graphics.Color.Transparent,
                         unselectedIconColor = MaterialTheme.colorScheme.onSurface,
                         unselectedTextColor = MaterialTheme.colorScheme.onSurface,
                     ),
                     shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp)
+                )
+                
+                val context = androidx.compose.ui.platform.LocalContext.current
+                val versionName = remember(context) {
+                    try {
+                        context.packageManager.getPackageInfo(context.packageName, 0).versionName
+                    } catch (e: Exception) {
+                        "Unknown"
+                    }
+                }
+                
+                Text(
+                    text = "Version $versionName",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = androidx.compose.ui.graphics.Color.Gray,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 24.dp, top = 8.dp)
                 )
             }
             }
