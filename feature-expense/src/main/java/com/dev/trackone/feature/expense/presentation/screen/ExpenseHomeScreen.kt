@@ -6,6 +6,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.border
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
@@ -47,6 +48,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -55,7 +57,6 @@ import com.dev.trackone.core.common.util.DateUtils
 import com.dev.trackone.core.ui.component.TrackOneCard
 import com.dev.trackone.core.ui.component.TrackOneEmptyState
 import com.dev.trackone.core.ui.component.TrackOneLoadingState
-import com.dev.trackone.core.ui.component.TrackOneSearchBar
 import com.dev.trackone.core.ui.theme.Dimens
 import com.dev.trackone.feature.expense.domain.model.ExpenseItem
 import com.dev.trackone.feature.expense.presentation.ExpenseUiState
@@ -72,36 +73,45 @@ fun ExpenseHomeScreen(
     onItemClick: (ExpenseItem) -> Unit,
     isRefreshing: Boolean = false,
     onRefresh: () -> Unit = {},
+    onScrollingDown: ((Boolean) -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
+    // Track scroll direction for bottom bar hide/show
+    val lazyListState = androidx.compose.foundation.lazy.rememberLazyListState()
+
+    // Detect actual gesture/fling scroll direction using NestedScrollConnection
+    val nestedScrollConnection = remember {
+        object : androidx.compose.ui.input.nestedscroll.NestedScrollConnection {
+            override fun onPreScroll(
+                available: androidx.compose.ui.geometry.Offset,
+                source: androidx.compose.ui.input.nestedscroll.NestedScrollSource
+            ): androidx.compose.ui.geometry.Offset {
+                val delta = available.y
+                // Threshold prevents micro-jitters from triggering hide/show
+                if (delta < -10f) { 
+                    // Content moves up -> user is scrolling down -> hide bars
+                    onScrollingDown?.invoke(true)
+                } else if (delta > 10f) { 
+                    // Content moves down -> user is scrolling up -> show bars
+                    onScrollingDown?.invoke(false)
+                }
+                return androidx.compose.ui.geometry.Offset.Zero
+            }
+        }
+    }
+
     androidx.compose.material3.pulltorefresh.PullToRefreshBox(
         isRefreshing = isRefreshing,
         onRefresh = onRefresh,
         modifier = modifier.fillMaxSize(),
     ) {
     Column(modifier = Modifier.fillMaxSize()) {
-        // Search bar (fixed)
-        AnimatedVisibility(
-            visible = uiState.isSearchActive,
-            enter = fadeIn(),
-            exit = fadeOut(),
-        ) {
-            TrackOneSearchBar(
-                query = uiState.searchQuery,
-                onQueryChange = onSearchQueryChange,
-                isActive = uiState.isSearchActive,
-                onActiveChange = {},
-                placeholder = "Search expenses...",
-                modifier = Modifier.padding(bottom = Dimens.SpacingSm),
-            )
-        }
-
-        when {
+         when {
             uiState.isLoading -> {
                 TrackOneLoadingState(message = "Loading transactions...")
             }
-            else -> {
-                // Fixed: Period Toggle
+            uiState.items.isEmpty() -> {
+                // When empty, show everything fixed (no scroll needed)
                 SharedTimePeriodToggle(
                     selectedPeriod = uiState.selectedPeriod,
                     onPeriodSelected = onPeriodChange,
@@ -110,8 +120,6 @@ fun ExpenseHomeScreen(
                         vertical = Dimens.SpacingSm,
                     ),
                 )
-
-                // Fixed: Date Navigation
                 SharedDateNavigationRow(
                     dateLabel = dateLabel,
                     onPrevious = { onNavigateDate(false) },
@@ -120,8 +128,6 @@ fun ExpenseHomeScreen(
                         horizontal = Dimens.SpacingLg,
                     ),
                 )
-
-                // Fixed: Balance Card
                 BalanceCard(
                     balance = uiState.balance,
                     income = uiState.totalIncome,
@@ -131,32 +137,78 @@ fun ExpenseHomeScreen(
                         vertical = Dimens.SpacingSm,
                     ),
                 )
-
-                // Scrollable: Transactions list only
-                if (uiState.items.isEmpty()) {
-                    TrackOneEmptyState(
-                        icon = Icons.Default.AccountBalanceWallet,
-                        title = "No transactions",
-                        subtitle = "No transactions found for this period",
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = Dimens.SpacingXxl),
-                    )
-                } else {
+                TrackOneEmptyState(
+                    icon = Icons.Default.AccountBalanceWallet,
+                    title = "No transactions",
+                    subtitle = "No transactions found for this period",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = Dimens.SpacingXxl),
+                )
+            }
+            else -> {
+                // Collapsing header: filter scrolls away, balance card sticks
+                @OptIn(ExperimentalFoundationApi::class)
                     LazyColumn(
+                        state = lazyListState,
                         contentPadding = PaddingValues(
                             bottom = 80.dp,
                         ),
                         verticalArrangement = Arrangement.spacedBy(Dimens.SpacingSm),
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier
+                            .weight(1f)
+                            .nestedScroll(nestedScrollConnection),
                     ) {
-                        items(uiState.items, key = { it.id }) { item ->
-                            ExpenseItemCard(
-                                item = item,
-                                onClick = { onItemClick(item) },
-                                modifier = Modifier.padding(horizontal = Dimens.SpacingLg),
+                    // Scrollable: Period Toggle (scrolls away)
+                    item(key = "period_toggle") {
+                        SharedTimePeriodToggle(
+                            selectedPeriod = uiState.selectedPeriod,
+                            onPeriodSelected = onPeriodChange,
+                            modifier = Modifier.padding(
+                                horizontal = Dimens.SpacingLg,
+                                vertical = Dimens.SpacingSm,
+                            ),
+                        )
+                    }
+
+                    // Scrollable: Date Navigation (scrolls away)
+                    item(key = "date_nav") {
+                        SharedDateNavigationRow(
+                            dateLabel = dateLabel,
+                            onPrevious = { onNavigateDate(false) },
+                            onNext = { onNavigateDate(true) },
+                            modifier = Modifier.padding(
+                                horizontal = Dimens.SpacingLg,
+                            ),
+                        )
+                    }
+
+                    // Sticky: Balance Card (pins to top when reached)
+                    stickyHeader(key = "balance_card") {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(MaterialTheme.colorScheme.background)
+                                .padding(
+                                    horizontal = Dimens.SpacingLg,
+                                    vertical = Dimens.SpacingSm,
+                                )
+                        ) {
+                            BalanceCard(
+                                balance = uiState.balance,
+                                income = uiState.totalIncome,
+                                expense = uiState.totalExpense,
                             )
                         }
+                    }
+
+                    // Transaction items
+                    items(uiState.items, key = { it.id }) { item ->
+                        ExpenseItemCard(
+                            item = item,
+                            onClick = { onItemClick(item) },
+                            modifier = Modifier.padding(horizontal = Dimens.SpacingLg),
+                        )
                     }
                 }
             }
@@ -174,49 +226,112 @@ private fun BalanceCard(
     expense: Double,
     modifier: Modifier = Modifier,
 ) {
-    TrackOneCard(modifier = modifier) {
+    val cardShape = RoundedCornerShape(24.dp)
+    val primaryContainer = MaterialTheme.colorScheme.primaryContainer
+    val onPrimaryContainer = MaterialTheme.colorScheme.onPrimaryContainer
+    val primary = MaterialTheme.colorScheme.primary
+    val surface = MaterialTheme.colorScheme.surface
+
+    // Glossy gradient: stronger primaryContainer for a distinct look
+    val gradientBrush = androidx.compose.ui.graphics.Brush.linearGradient(
+        colors = listOf(
+            primaryContainer,
+            primaryContainer,
+            primaryContainer.copy(alpha = 0.85f),
+        ),
+    )
+
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(cardShape),
+    ) {
+        // Card background with gradient
+        Box(
+            modifier = Modifier
+                .matchParentSize()
+                .background(brush = gradientBrush),
+        )
+
+        // Glossy shine overlay — subtle top highlight
+        Box(
+            modifier = Modifier
+                .matchParentSize()
+                .background(
+                    brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+                        colors = listOf(
+                            Color.White.copy(alpha = 0.3f),
+                            Color.White.copy(alpha = 0.05f),
+                            Color.Transparent,
+                        ),
+                    ),
+                ),
+        )
+
+        // Subtle border for glass edge
+        Box(
+            modifier = Modifier
+                .matchParentSize()
+                .border(
+                    width = 1.dp,
+                    brush = androidx.compose.ui.graphics.Brush.linearGradient(
+                        colors = listOf(
+                            primary.copy(alpha = 0.25f),
+                            primary.copy(alpha = 0.08f),
+                        ),
+                    ),
+                    shape = cardShape,
+                ),
+        )
+
+        // Card content
         Column(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp, vertical = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(
                 text = "Total Balance",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.labelLarge,
+                color = onPrimaryContainer.copy(alpha = 0.6f),
+                letterSpacing = androidx.compose.ui.unit.TextUnit(1.5f, androidx.compose.ui.unit.TextUnitType.Sp),
             )
-            Spacer(modifier = Modifier.height(Dimens.SpacingXs))
+            Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = CurrencyUtils.formatAmount(balance),
                 style = MaterialTheme.typography.headlineLarge,
                 fontWeight = FontWeight.Bold,
-                color = if (balance >= 0) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.error,
+                color = onPrimaryContainer,
             )
-            
-            Spacer(modifier = Modifier.height(Dimens.SpacingLg))
-            
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // Frosted-glass stat chips
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly,
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                BalanceStat(
+                GlossyBalanceStat(
                     label = "Income",
                     amount = income,
                     icon = Icons.Default.ArrowUpward,
-                    color = MaterialTheme.colorScheme.tertiary,
+                    accentColor = MaterialTheme.colorScheme.tertiary,
+                    chipBackground = primary.copy(alpha = 0.08f),
+                    chipBorder = primary.copy(alpha = 0.15f),
+                    labelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.weight(1f),
                 )
-                
-                Box(
-                    modifier = Modifier
-                        .height(40.dp)
-                        .width(1.dp)
-                        .background(MaterialTheme.colorScheme.outlineVariant)
-                ) {}
-                
-                BalanceStat(
+
+                GlossyBalanceStat(
                     label = "Expense",
                     amount = expense,
                     icon = Icons.Default.ArrowDownward,
-                    color = MaterialTheme.colorScheme.error,
+                    accentColor = MaterialTheme.colorScheme.error,
+                    chipBackground = primary.copy(alpha = 0.08f),
+                    chipBorder = primary.copy(alpha = 0.15f),
+                    labelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.weight(1f),
                 )
             }
         }
@@ -224,33 +339,61 @@ private fun BalanceCard(
 }
 
 @Composable
-private fun BalanceStat(
+private fun GlossyBalanceStat(
     label: String,
     amount: Double,
     icon: androidx.compose.ui.graphics.vector.ImageVector,
-    color: androidx.compose.ui.graphics.Color,
+    accentColor: Color,
+    chipBackground: Color,
+    chipBorder: Color,
+    labelColor: Color,
+    modifier: Modifier = Modifier,
 ) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = color,
-                modifier = Modifier.size(Dimens.IconSizeSm),
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(16.dp))
+            .background(chipBackground)
+            .border(
+                width = 1.dp,
+                color = chipBorder,
+                shape = RoundedCornerShape(16.dp),
             )
-            Spacer(modifier = Modifier.width(Dimens.SpacingXs))
+            .padding(horizontal = 12.dp, vertical = 10.dp),
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(24.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(accentColor.copy(alpha = 0.15f)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = accentColor,
+                        modifier = Modifier.size(14.dp),
+                    )
+                }
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = labelColor,
+                )
+            }
+            Spacer(modifier = Modifier.height(6.dp))
             Text(
-                text = label,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                text = CurrencyUtils.formatAmount(amount),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = accentColor,
             )
         }
-        Text(
-            text = CurrencyUtils.formatAmount(amount),
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
-            color = color,
-        )
     }
 }
 

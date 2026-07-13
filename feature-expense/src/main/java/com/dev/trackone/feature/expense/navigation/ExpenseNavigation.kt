@@ -78,21 +78,35 @@ fun ExpenseNavigation(
     
     val isOnMainScreen = currentNavRoute == ExpenseRoutes.MAIN_PAGER || currentNavRoute == null
 
+    // Bars scroll-aware visibility
+    var isBarsVisible by remember { mutableStateOf(true) }
+
     com.dev.trackone.core.ui.theme.ExpenseModuleTheme {
     Scaffold(
         topBar = {
             if (isOnMainScreen) {
-                TrackOneTopBar(
-                    title = when (currentRoute) {
-                        ExpenseRoutes.HOME -> "Expense Tracker"
-                        ExpenseRoutes.ADD -> "Add Transaction"
-                        ExpenseRoutes.STATS -> "Statistics"
-                        ExpenseRoutes.SETTINGS -> "Settings"
-                        else -> "Expense"
-                    },
-                    showSearchIcon = currentRoute == ExpenseRoutes.HOME,
-                    onSearchClick = { viewModel.toggleSearch() },
-                )
+                if (currentRoute != ExpenseRoutes.HOME) {
+                    androidx.compose.animation.AnimatedVisibility(
+                        visible = isBarsVisible,
+                        enter = androidx.compose.animation.expandVertically(
+                            expandFrom = Alignment.Top,
+                            animationSpec = tween(250),
+                        ) + fadeIn(tween(200)),
+                        exit = androidx.compose.animation.shrinkVertically(
+                            shrinkTowards = Alignment.Top,
+                            animationSpec = tween(250),
+                        ) + fadeOut(tween(150)),
+                    ) {
+                        TrackOneTopBar(
+                            title = when (currentRoute) {
+                                ExpenseRoutes.ADD -> "Add Transaction"
+                                ExpenseRoutes.STATS -> "Statistics"
+                                ExpenseRoutes.SETTINGS -> "Settings"
+                                else -> "Expense"
+                            },
+                        )
+                    }
+                }
             } else if (currentNavRoute == ExpenseRoutes.DETAIL) {
                 TrackOneTopBar(
                     title = "Transaction Details",
@@ -102,7 +116,7 @@ fun ExpenseNavigation(
                         navController.popBackStack()
                     },
                 )
-            } else {
+            } else if (currentNavRoute == ExpenseRoutes.EDIT) {
                 TrackOneTopBar(
                     title = "Edit Transaction",
                     showBackButton = true,
@@ -143,7 +157,10 @@ fun ExpenseNavigation(
                                         navController.navigate(ExpenseRoutes.DETAIL)
                                     },
                                     isRefreshing = uiState.isRefreshing,
-                                    onRefresh = { viewModel.refresh() }
+                                    onRefresh = { viewModel.refresh() },
+                                    onScrollingDown = { scrollingDown ->
+                                        isBarsVisible = !scrollingDown
+                                    },
                                 )
                             }
                             ExpenseRoutes.ADD -> {
@@ -224,24 +241,36 @@ fun ExpenseNavigation(
                 }
             }
 
-            // Floating bottom bar overlay — transparent behind the pill
+            // Animated bottom bar — slides down to hide on scroll
             if (isOnMainScreen) {
-                TrackOneBottomBar(
-                    items = expenseBottomNavItems,
-                    selectedRoute = currentRoute,
-                    onSwipeLeft = onSwipeLeft,
-                    onSwipeRight = onSwipeRight,
-                    onItemSelected = { item ->
-                        val index = expenseBottomNavItems.indexOfFirst { it.route == item.route }
-                        if (index >= 0) {
-                            if (item.route == ExpenseRoutes.ADD) {
-                                viewModel.initAddForm()
-                            }
-                            coroutineScope.launch { pagerState.animateScrollToPage(index) }
-                        }
-                    },
+                androidx.compose.animation.AnimatedVisibility(
+                    visible = isBarsVisible,
+                    enter = androidx.compose.animation.slideInVertically(
+                        initialOffsetY = { it },
+                        animationSpec = tween(250),
+                    ) + fadeIn(tween(200)),
+                    exit = androidx.compose.animation.slideOutVertically(
+                        targetOffsetY = { it },
+                        animationSpec = tween(250),
+                    ) + fadeOut(tween(150)),
                     modifier = Modifier.align(Alignment.BottomCenter),
-                )
+                ) {
+                    TrackOneBottomBar(
+                        items = expenseBottomNavItems,
+                        selectedRoute = currentRoute,
+                        onSwipeLeft = onSwipeLeft,
+                        onSwipeRight = onSwipeRight,
+                        onItemSelected = { item ->
+                            val index = expenseBottomNavItems.indexOfFirst { it.route == item.route }
+                            if (index >= 0) {
+                                if (item.route == ExpenseRoutes.ADD) {
+                                    viewModel.initAddForm()
+                                }
+                                coroutineScope.launch { pagerState.animateScrollToPage(index) }
+                            }
+                        },
+                    )
+                }
             }
         }
     }
