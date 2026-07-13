@@ -315,7 +315,17 @@ fun TrackOneApp(
         }
     }
 
-    if (showSettingsScreen) {
+    androidx.compose.animation.AnimatedVisibility(
+        visible = showSettingsScreen,
+        enter = androidx.compose.animation.slideInVertically(
+            initialOffsetY = { it },
+            animationSpec = spring(stiffness = Spring.StiffnessMediumLow)
+        ) + fadeIn(),
+        exit = androidx.compose.animation.slideOutVertically(
+            targetOffsetY = { it },
+            animationSpec = spring(stiffness = Spring.StiffnessMediumLow)
+        ) + fadeOut()
+    ) {
         com.dev.trackone.ui.settings.SettingsScreen(
             onNavigateBack = { showSettingsScreen = false },
             onNavigateToBackup = { 
@@ -325,7 +335,17 @@ fun TrackOneApp(
         )
     }
 
-    if (showBackupScreen) {
+    androidx.compose.animation.AnimatedVisibility(
+        visible = showBackupScreen,
+        enter = androidx.compose.animation.slideInVertically(
+            initialOffsetY = { it },
+            animationSpec = spring(stiffness = Spring.StiffnessMediumLow)
+        ) + fadeIn(),
+        exit = androidx.compose.animation.slideOutVertically(
+            targetOffsetY = { it },
+            animationSpec = spring(stiffness = Spring.StiffnessMediumLow)
+        ) + fadeOut()
+    ) {
         com.dev.trackone.ui.settings.BackupScreen(
             syncUiState = syncUiState,
             onBackupClick = { viewModel.onBackup() },

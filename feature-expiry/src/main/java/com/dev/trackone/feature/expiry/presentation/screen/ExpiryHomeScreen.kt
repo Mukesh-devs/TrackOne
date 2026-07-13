@@ -218,12 +218,19 @@ fun ExpiryGroupCard(
     
     val cardTextColor = if (isExpired) androidx.compose.ui.graphics.Color(0xFFB71C1C) else androidx.compose.ui.graphics.Color(0xFF1B5E20)
 
+    val borderColor = if (isExpired) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
+
     TrackOneCard(
         onClick = onClick,
         modifier = modifier
             .border(
                 width = 1.dp,
-                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.15f),
+                brush = androidx.compose.ui.graphics.Brush.linearGradient(
+                    colors = listOf(
+                        borderColor.copy(alpha = 0.25f),
+                        borderColor.copy(alpha = 0.08f),
+                    )
+                ),
                 shape = androidx.compose.foundation.shape.RoundedCornerShape(20.dp)
             ),
         shape = androidx.compose.foundation.shape.RoundedCornerShape(20.dp),

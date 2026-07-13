@@ -136,8 +136,30 @@ fun ExpenseNavigation(
                 navController = navController,
                 startDestination = ExpenseRoutes.MAIN_PAGER,
                 modifier = Modifier.fillMaxSize(),
-                enterTransition = { fadeIn(tween(200)) },
-                exitTransition = { fadeOut(tween(200)) },
+                enterTransition = { 
+                    androidx.compose.animation.slideInHorizontally(
+                        initialOffsetX = { it },
+                        animationSpec = tween(300)
+                    ) + fadeIn(tween(300))
+                },
+                exitTransition = { 
+                    androidx.compose.animation.slideOutHorizontally(
+                        targetOffsetX = { -it / 3 },
+                        animationSpec = tween(300)
+                    ) + fadeOut(tween(300))
+                },
+                popEnterTransition = {
+                    androidx.compose.animation.slideInHorizontally(
+                        initialOffsetX = { -it / 3 },
+                        animationSpec = tween(300)
+                    ) + fadeIn(tween(300))
+                },
+                popExitTransition = {
+                    androidx.compose.animation.slideOutHorizontally(
+                        targetOffsetX = { it },
+                        animationSpec = tween(300)
+                    ) + fadeOut(tween(300))
+                },
             ) {
                 composable(ExpenseRoutes.MAIN_PAGER) {
                     androidx.compose.foundation.pager.HorizontalPager(

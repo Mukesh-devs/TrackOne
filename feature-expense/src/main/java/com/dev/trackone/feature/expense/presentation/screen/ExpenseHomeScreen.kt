@@ -408,7 +408,12 @@ private fun ExpenseItemCard(
         modifier = modifier
             .border(
                 width = 1.dp,
-                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.15f),
+                brush = androidx.compose.ui.graphics.Brush.linearGradient(
+                    colors = listOf(
+                        MaterialTheme.colorScheme.primary.copy(alpha = 0.25f),
+                        MaterialTheme.colorScheme.primary.copy(alpha = 0.08f),
+                    )
+                ),
                 shape = androidx.compose.foundation.shape.RoundedCornerShape(20.dp)
             )
             .clickable(onClick = onClick),
