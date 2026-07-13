@@ -49,10 +49,16 @@ class ExpiryViewModel @Inject constructor(
             ) { all, expired, providers, dismissed ->
                 val groups = all.groupBy { it.provider }
                     .map { (provider, items) -> ExpiryGroup(name = provider, items = items) }
-                    .filter { it.name !in dismissed }
+                    .filter { group ->
+                        val hasActive = group.nearestExpiry != null
+                        if (hasActive) true else group.name !in dismissed
+                    }
                     .sortedBy { group -> group.items.minOf { it.expiryDate } }
 
                 _uiState.update { state ->
+                    val updatedSelectedGroup = state.selectedGroup?.let { currentSelected ->
+                        groups.find { it.name == currentSelected.name }
+                    }
                     state.copy(
                         isLoading = false,
                         allItems = all,
@@ -60,6 +66,7 @@ class ExpiryViewModel @Inject constructor(
                         expiredItems = expired,
                         providers = providers,
                         error = null,
+                        selectedGroup = updatedSelectedGroup
                     )
                 }
             }

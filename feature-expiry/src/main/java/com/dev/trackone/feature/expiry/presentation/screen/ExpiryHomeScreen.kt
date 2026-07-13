@@ -193,21 +193,21 @@ fun ExpiryGroupCard(
     val daysLeft = DateUtils.daysUntil(effectiveExpiry)
     val isExpired = daysLeft < 0
 
-    val urgencyColor = if (isExpired || daysLeft < 7) {
+    val urgencyColor = if (isExpired || daysLeft <= 7) {
         androidx.compose.ui.graphics.Color(0xFFD32F2F) // Red
     } else {
         androidx.compose.ui.graphics.Color(0xFF388E3C) // Green
     }
 
     val totalDuration = effectiveExpiry - nearestItem.purchasedDate
-    val remaining = effectiveExpiry - System.currentTimeMillis()
+    val elapsed = System.currentTimeMillis() - nearestItem.purchasedDate
     val progress = if (totalDuration > 0) {
-        (remaining.toFloat() / totalDuration.toFloat()).coerceIn(0f, 1f)
-    } else 0f
+        (elapsed.toFloat() / totalDuration.toFloat()).coerceIn(0f, 1f)
+    } else 1f
 
-    val animatedProgress by animateFloatAsState(
+    val animatedProgress by androidx.compose.animation.core.animateFloatAsState(
         targetValue = progress,
-        animationSpec = tween(600),
+        animationSpec = androidx.compose.animation.core.tween(600),
         label = "progress"
     )
 
