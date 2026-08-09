@@ -41,6 +41,7 @@ import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.CloudUpload
@@ -104,8 +105,15 @@ fun TrackOneApp(
         return
     }
 
+    var showDashboard by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(true) }
     var currentModuleIndex by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(0) }
     var showSyncSheet by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+
+    // Dashboard ViewModel
+    val dashboardViewModel: com.dev.trackone.ui.dashboard.DashboardViewModel = androidx.hilt.navigation.compose.hiltViewModel()
+    val expiringTodayCount by dashboardViewModel.expiringTodayCount.collectAsStateWithLifecycle()
+    val todayExpenseTotal by dashboardViewModel.todayExpenseTotal.collectAsStateWithLifecycle()
+    val credentialCount by dashboardViewModel.credentialCount.collectAsStateWithLifecycle()
     val syncSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     // Sync state with ViewModel
@@ -148,9 +156,37 @@ fun TrackOneApp(
                     )
                 }
                 Spacer(modifier = Modifier.height(16.dp))
+
+                // Home / Dashboard item
+                NavigationDrawerItem(
+                    label = { 
+                        Text(
+                            text = "Home",
+                            fontWeight = if (showDashboard) androidx.compose.ui.text.font.FontWeight.Bold else androidx.compose.ui.text.font.FontWeight.Medium
+                        ) 
+                    },
+                    selected = showDashboard,
+                    icon = { Icon(Icons.Default.Home, contentDescription = null) },
+                    onClick = {
+                        coroutineScope.launch {
+                            drawerState.close()
+                            showDashboard = true
+                        }
+                    },
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
+                    colors = androidx.compose.material3.NavigationDrawerItemDefaults.colors(
+                        selectedContainerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
+                        selectedIconColor = MaterialTheme.colorScheme.primary,
+                        selectedTextColor = MaterialTheme.colorScheme.primary,
+                        unselectedContainerColor = androidx.compose.ui.graphics.Color.Transparent,
+                        unselectedIconColor = androidx.compose.ui.graphics.Color.Black,
+                        unselectedTextColor = androidx.compose.ui.graphics.Color.Black,
+                    ),
+                    shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp)
+                )
                 
                 modules.forEachIndexed { index, module ->
-                    val isSelected = currentModuleIndex == index
+                    val isSelected = !showDashboard && currentModuleIndex == index
                     NavigationDrawerItem(
                         label = { 
                             Text(
@@ -163,6 +199,7 @@ fun TrackOneApp(
                         onClick = {
                             coroutineScope.launch {
                                 drawerState.close()
+                                showDashboard = false
                                 currentModuleIndex = index
                             }
                         },
@@ -233,61 +270,91 @@ fun TrackOneApp(
             containerColor = MaterialTheme.colorScheme.background,
         ) { innerPadding ->
             Box(modifier = Modifier.fillMaxSize()) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(bottom = innerPadding.calculateBottomPadding()),
-                ) {
-                    // Module indicator header
-                    com.dev.trackone.core.ui.theme.DynamicModuleTheme(moduleTitle = currentModuleTitle) {
-                        ModuleIndicator(
-                            modules = modules,
-                            currentPage = currentModuleIndex,
-                            onMenuClick = { coroutineScope.launch { drawerState.open() } },
-                            onCloudClick = { showSyncSheet = true },
-                            isBackupPending = isBackupPending,
-                            isSignedIn = isSignedIn,
-                            modifier = Modifier.fillMaxWidth(),
-                        )
+                if (showDashboard) {
+                    // Dashboard home screen
+                    com.dev.trackone.ui.dashboard.DashboardScreen(
+                        expiringTodayCount = expiringTodayCount,
+                        todayExpenseTotal = todayExpenseTotal,
+                        credentialCount = credentialCount,
+                        onMenuClick = { coroutineScope.launch { drawerState.open() } },
+                        onCloudClick = { showSyncSheet = true },
+                        isBackupPending = isBackupPending,
+                        isSignedIn = isSignedIn,
+                        onExpiryClick = {
+                            showDashboard = false
+                            currentModuleIndex = modules.indexOfFirst { it.title.contains("Expiry", ignoreCase = true) }.coerceAtLeast(0)
+                        },
+                        onExpenseClick = {
+                            showDashboard = false
+                            currentModuleIndex = modules.indexOfFirst { it.title.contains("Expense", ignoreCase = true) }.coerceAtLeast(0)
+                        },
+                        onCredentialClick = {
+                            showDashboard = false
+                            currentModuleIndex = modules.indexOfFirst { it.title.contains("Credential", ignoreCase = true) }.coerceAtLeast(0)
+                        },
+                    )
+                } else {
+                    // Back press returns to dashboard
+                    androidx.activity.compose.BackHandler(enabled = true) {
+                        showDashboard = true
                     }
+                    // Module pager view
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(bottom = innerPadding.calculateBottomPadding()),
+                    ) {
+                        // Module indicator header
+                        com.dev.trackone.core.ui.theme.DynamicModuleTheme(moduleTitle = currentModuleTitle) {
+                            ModuleIndicator(
+                                modules = modules,
+                                currentPage = currentModuleIndex,
+                                onMenuClick = { coroutineScope.launch { drawerState.open() } },
+                                onCloudClick = { showSyncSheet = true },
+                                isBackupPending = isBackupPending,
+                                isSignedIn = isSignedIn,
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+                        }
 
-                    // Module pages
-                    androidx.compose.animation.AnimatedContent(
-                        targetState = currentModuleIndex,
-                        transitionSpec = {
-                            if (targetState > initialState) {
-                                (androidx.compose.animation.slideInHorizontally { width -> width } + androidx.compose.animation.fadeIn()).togetherWith(
-                                    androidx.compose.animation.slideOutHorizontally { width -> -width } + androidx.compose.animation.fadeOut()
-                                )
-                            } else {
-                                (androidx.compose.animation.slideInHorizontally { width -> -width } + androidx.compose.animation.fadeIn()).togetherWith(
-                                    androidx.compose.animation.slideOutHorizontally { width -> width } + androidx.compose.animation.fadeOut()
+                        // Module pages
+                        androidx.compose.animation.AnimatedContent(
+                            targetState = currentModuleIndex,
+                            transitionSpec = {
+                                if (targetState > initialState) {
+                                    (androidx.compose.animation.slideInHorizontally { width -> width } + androidx.compose.animation.fadeIn()).togetherWith(
+                                        androidx.compose.animation.slideOutHorizontally { width -> -width } + androidx.compose.animation.fadeOut()
+                                    )
+                                } else {
+                                    (androidx.compose.animation.slideInHorizontally { width -> -width } + androidx.compose.animation.fadeIn()).togetherWith(
+                                        androidx.compose.animation.slideOutHorizontally { width -> width } + androidx.compose.animation.fadeOut()
+                                    )
+                                }
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .weight(1f),
+                            label = "ModuleTransition"
+                        ) { targetIndex ->
+                            Surface(
+                                modifier = Modifier.fillMaxSize(),
+                                color = MaterialTheme.colorScheme.background,
+                            ) {
+                                modules[targetIndex].Content(
+                                    onSwipeLeft = {
+                                        currentModuleIndex = (currentModuleIndex + 1).coerceAtMost(modules.size - 1)
+                                    },
+                                    onSwipeRight = {
+                                        currentModuleIndex = (currentModuleIndex - 1).coerceAtLeast(0)
+                                    }
                                 )
                             }
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .weight(1f),
-                        label = "ModuleTransition"
-                    ) { targetIndex ->
-                        Surface(
-                            modifier = Modifier.fillMaxSize(),
-                            color = MaterialTheme.colorScheme.background,
-                        ) {
-                            modules[targetIndex].Content(
-                                onSwipeLeft = {
-                                    currentModuleIndex = (currentModuleIndex + 1).coerceAtMost(modules.size - 1)
-                                },
-                                onSwipeRight = {
-                                    currentModuleIndex = (currentModuleIndex - 1).coerceAtLeast(0)
-                                }
-                            )
                         }
                     }
                 }
                 
                 val userPreferences by viewModel.userPreferences.collectAsStateWithLifecycle()
-                if (userPreferences?.hasSeenTour == false) {
+                if (userPreferences?.hasSeenTour == false && !showDashboard) {
                     GuidedTourOverlay(
                         onComplete = {
                             viewModel.completeTour()

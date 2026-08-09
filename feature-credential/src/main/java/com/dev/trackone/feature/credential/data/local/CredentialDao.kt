@@ -65,4 +65,7 @@ interface CredentialDao {
 
     @Query("SELECT DISTINCT category FROM credential_items WHERE category != '' ORDER BY category ASC")
     fun getAllCategories(): Flow<List<String>>
+
+    @Query("SELECT COUNT(*) FROM credential_items")
+    fun countAll(): Flow<Int>
 }

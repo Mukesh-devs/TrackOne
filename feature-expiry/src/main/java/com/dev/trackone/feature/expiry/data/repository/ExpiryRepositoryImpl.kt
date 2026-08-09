@@ -62,4 +62,7 @@ class ExpiryRepositoryImpl @Inject constructor(
 
     override suspend fun deleteById(id: Long) =
         dao.deleteById(id)
+
+    override fun countExpiringBetween(dayStart: Long, dayEnd: Long): Flow<Int> =
+        dao.countExpiringBetween(dayStart, dayEnd)
 }

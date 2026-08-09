@@ -33,4 +33,6 @@ interface ExpiryRepository {
     suspend fun delete(item: ExpiryItem)
 
     suspend fun deleteById(id: Long)
+
+    fun countExpiringBetween(dayStart: Long, dayEnd: Long): Flow<Int>
 }

@@ -27,4 +27,6 @@ interface CredentialRepository {
     suspend fun delete(item: CredentialItem)
 
     suspend fun deleteById(id: Long)
+
+    fun countAll(): Flow<Int>
 }

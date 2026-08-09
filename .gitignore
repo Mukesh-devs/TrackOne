@@ -104,3 +104,9 @@ out/
 # Custom for project hierarchy (since modules also have build dirs)
 */build/
 */*/build/
+
+# Project Documentation
+PROJECT_DOCUMENTATION.md
+
+# Agent Context
+context.md

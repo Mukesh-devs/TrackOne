@@ -80,4 +80,7 @@ interface ExpiryDao {
 
     @Query("SELECT DISTINCT provider FROM expiry_items ORDER BY provider ASC")
     fun getAllProviders(): Flow<List<String>>
+
+    @Query("SELECT COUNT(*) FROM expiry_items WHERE expiryDate BETWEEN :dayStart AND :dayEnd")
+    fun countExpiringBetween(dayStart: Long, dayEnd: Long): Flow<Int>
 }

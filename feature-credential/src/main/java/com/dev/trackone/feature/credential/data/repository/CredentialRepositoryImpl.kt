@@ -47,4 +47,7 @@ class CredentialRepositoryImpl @Inject constructor(
 
     override suspend fun deleteById(id: Long) =
         dao.deleteById(id)
+
+    override fun countAll(): Flow<Int> =
+        dao.countAll()
 }

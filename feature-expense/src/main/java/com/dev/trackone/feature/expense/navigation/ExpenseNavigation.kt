@@ -38,6 +38,7 @@ import kotlinx.coroutines.launch
 object ExpenseRoutes {
     const val MAIN_PAGER = "expense_main_pager"
     const val HOME = "expense_home"
+    const val TRANSACTIONS = "expense_transactions"
     const val ADD = "expense_add"
     const val STATS = "expense_stats"
     const val SETTINGS = "expense_settings"
@@ -107,6 +108,9 @@ fun ExpenseNavigation(
                         )
                     }
                 }
+            } else if (currentNavRoute == ExpenseRoutes.TRANSACTIONS) {
+                // Transactions screen has its own custom top bar in the new design,
+                // so we don't render TrackOneTopBar here for it.
             } else if (currentNavRoute == ExpenseRoutes.DETAIL) {
                 TrackOneTopBar(
                     title = "Transaction Details",
@@ -178,6 +182,10 @@ fun ExpenseNavigation(
                                         viewModel.selectItem(item)
                                         navController.navigate(ExpenseRoutes.DETAIL)
                                     },
+                                    onViewAllClick = {
+                                        navController.navigate(ExpenseRoutes.TRANSACTIONS)
+                                    },
+                                    onMenuClick = { },
                                     isRefreshing = uiState.isRefreshing,
                                     onRefresh = { viewModel.refresh() },
                                     onScrollingDown = { scrollingDown ->
@@ -221,6 +229,22 @@ fun ExpenseNavigation(
                             }
                         }
                     }
+                }
+
+                composable(ExpenseRoutes.TRANSACTIONS) {
+                    com.dev.trackone.feature.expense.presentation.screen.ExpenseTransactionsScreen(
+                        uiState = uiState,
+                        dateLabel = viewModel.getDateLabel(),
+                        onPeriodChange = { viewModel.setTimePeriod(it) },
+                        onNavigateDate = { viewModel.navigateDate(it) },
+                        onItemClick = { item ->
+                            viewModel.selectItem(item)
+                            navController.navigate(ExpenseRoutes.DETAIL)
+                        },
+                        onBack = { navController.popBackStack() },
+                        isRefreshing = uiState.isRefreshing,
+                        onRefresh = { viewModel.refresh() }
+                    )
                 }
 
                 composable(ExpenseRoutes.EDIT) {
