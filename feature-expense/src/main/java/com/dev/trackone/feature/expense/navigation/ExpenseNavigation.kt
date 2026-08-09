@@ -2,6 +2,7 @@ package com.dev.trackone.feature.expense.navigation
 
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
+import androidx.compose.animation.togetherWith
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -104,7 +105,21 @@ fun ExpenseNavigation(
         ) {
             composable(ExpenseRoutes.MAIN) {
                 Box(modifier = Modifier.fillMaxSize()) {
-                    when (currentTab) {
+                    androidx.compose.animation.AnimatedContent(
+                        targetState = currentTab,
+                        transitionSpec = {
+                            (fadeIn(tween(220)) + androidx.compose.animation.slideInHorizontally(tween(220)) { it / 14 }) togetherWith
+                                fadeOut(tween(160))
+                        },
+                        modifier = Modifier.fillMaxSize(),
+                        label = "expense_tabs",
+                    ) { tab ->
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(MaterialTheme.colorScheme.background),
+                        ) {
+                    when (tab) {
                         ExpenseRoutes.HOME -> ExpenseHomeScreen(
                             uiState = uiState,
                             dateLabel = dateLabel,
@@ -171,6 +186,8 @@ fun ExpenseNavigation(
                         }
 
                         else -> Unit
+                    }
+                        }
                     }
 
                     TrackOneFloatingNav(

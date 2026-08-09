@@ -3,6 +3,7 @@ package com.dev.trackone.feature.expiry.navigation
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -100,8 +101,22 @@ fun ExpiryNavigation(
         ) {
             composable(ExpiryRoutes.MAIN) {
                 Box(modifier = Modifier.fillMaxSize()) {
-                    // Only the selected section renders — no pager, no swipe.
-                    when (currentRoute) {
+                    // Animated section switch (fade + subtle slide, single page).
+                    androidx.compose.animation.AnimatedContent(
+                        targetState = currentRoute,
+                        transitionSpec = {
+                            (fadeIn(tween(220)) + androidx.compose.animation.slideInHorizontally(tween(220)) { it / 14 }) togetherWith
+                                fadeOut(tween(160))
+                        },
+                        modifier = Modifier.fillMaxSize(),
+                        label = "expiry_tabs",
+                    ) { route ->
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(MaterialTheme.colorScheme.background),
+                        ) {
+                    when (route) {
                         ExpiryRoutes.HOME -> ExpiryHomeScreen(
                             uiState = uiState,
                             onItemClick = { item ->
@@ -141,6 +156,8 @@ fun ExpiryNavigation(
                         )
 
                         else -> Unit
+                    }
+                        }
                     }
 
                     TrackOneFloatingNav(

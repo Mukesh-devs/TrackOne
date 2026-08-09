@@ -2,6 +2,8 @@ package com.dev.trackone.feature.credential.navigation
 
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.background
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -173,7 +175,21 @@ fun CredentialNavigation(
                 exitTransition = { fadeOut(tween(200)) },
             ) {
                 composable(CredentialRoutes.MAIN_PAGER) {
-                    when (currentTab) {
+                    androidx.compose.animation.AnimatedContent(
+                        targetState = currentTab,
+                        transitionSpec = {
+                            (fadeIn(tween(220)) + androidx.compose.animation.slideInHorizontally(tween(220)) { it / 14 }) togetherWith
+                                fadeOut(tween(160))
+                        },
+                        modifier = Modifier.fillMaxSize(),
+                        label = "credential_tabs",
+                    ) { tab ->
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(MaterialTheme.colorScheme.background),
+                        ) {
+                    when (tab) {
                             CredentialRoutes.HOME -> {
                                 CredentialHomeScreen(
                                     uiState = uiState,
@@ -212,6 +228,8 @@ fun CredentialNavigation(
                             }
                             else -> Unit
                         }
+                        }
+                    }
                 }
 
                 composable(
