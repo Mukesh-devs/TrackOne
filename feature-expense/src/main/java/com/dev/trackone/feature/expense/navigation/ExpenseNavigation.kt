@@ -56,8 +56,6 @@ private val expenseBottomNavItems = listOf(
 @androidx.compose.material3.ExperimentalMaterial3Api
 @Composable
 fun ExpenseNavigation(
-    onSwipeLeft: () -> Unit = {},
-    onSwipeRight: () -> Unit = {},
     modifier: Modifier = Modifier,
     navController: NavHostController = rememberNavController(),
     viewModel: ExpenseViewModel = hiltViewModel()
@@ -304,8 +302,6 @@ fun ExpenseNavigation(
                     TrackOneBottomBar(
                         items = expenseBottomNavItems,
                         selectedRoute = currentRoute,
-                        onSwipeLeft = onSwipeLeft,
-                        onSwipeRight = onSwipeRight,
                         onItemSelected = { item ->
                             val index = expenseBottomNavItems.indexOfFirst { it.route == item.route }
                             if (index >= 0) {

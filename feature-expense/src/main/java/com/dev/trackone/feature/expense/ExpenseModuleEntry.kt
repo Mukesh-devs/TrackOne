@@ -19,7 +19,7 @@ class ExpenseModuleEntry @Inject constructor() : ModuleEntry {
 
     @androidx.compose.material3.ExperimentalMaterial3Api
     @Composable
-    override fun Content(onSwipeLeft: () -> Unit, onSwipeRight: () -> Unit) {
-        ExpenseNavigation(onSwipeLeft = onSwipeLeft, onSwipeRight = onSwipeRight)
+    override fun Content() {
+        ExpenseNavigation()
     }
 }

@@ -32,5 +32,5 @@ interface ModuleEntry {
      * Composable content for the module.
      */
     @Composable
-    fun Content(onSwipeLeft: () -> Unit, onSwipeRight: () -> Unit)
+    fun Content()
 }

@@ -101,7 +101,6 @@ class CredentialViewModel @Inject constructor(
     fun refresh() {
         viewModelScope.launch {
             _uiState.update { it.copy(isRefreshing = true) }
-            kotlinx.coroutines.delay(800) // Fake delay for UX
             loadData()
             _uiState.update { it.copy(isRefreshing = false) }
         }

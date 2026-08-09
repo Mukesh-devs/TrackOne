@@ -60,8 +60,6 @@ private val credentialBottomNavItems = listOf(
 @androidx.compose.material3.ExperimentalMaterial3Api
 @Composable
 fun CredentialNavigation(
-    onSwipeLeft: () -> Unit = {},
-    onSwipeRight: () -> Unit = {},
     modifier: Modifier = Modifier,
     navController: NavHostController = rememberNavController(),
     viewModel: CredentialViewModel = hiltViewModel()
@@ -221,8 +219,6 @@ fun CredentialNavigation(
                 TrackOneBottomBar(
                     items = credentialBottomNavItems,
                     selectedRoute = currentRoute,
-                    onSwipeLeft = onSwipeLeft,
-                    onSwipeRight = onSwipeRight,
                     onItemSelected = { item ->
                         val index = credentialBottomNavItems.indexOfFirst { it.route == item.route }
                         if (index >= 0) {

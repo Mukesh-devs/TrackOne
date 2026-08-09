@@ -3,6 +3,7 @@ package com.dev.trackone.feature.expiry.presentation.screen
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,34 +15,31 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
-import androidx.compose.ui.unit.dp
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Notes
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.material.icons.filled.DateRange
-import androidx.compose.material.icons.filled.Event
-import androidx.compose.material.icons.filled.AttachMoney
-import androidx.compose.material.icons.filled.Notes
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Email
-import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -49,273 +47,298 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import com.dev.trackone.core.common.util.CurrencyUtils
 import com.dev.trackone.core.common.util.DateUtils
-import com.dev.trackone.core.ui.component.TrackOneCard
 import com.dev.trackone.core.ui.component.TrackOneDeleteDialog
-import com.dev.trackone.core.ui.theme.Dimens
-import com.dev.trackone.feature.expiry.domain.model.ExpiryGroup
+import com.dev.trackone.core.ui.theme.ActiveGreen
+import com.dev.trackone.core.ui.theme.ExpiredRed
+import com.dev.trackone.core.ui.theme.WarningAmber
 import com.dev.trackone.feature.expiry.domain.model.ExpiryItem
 
+private const val SOON_DAYS = 30L
+
 /**
- * Detail screen showing all entries within a group.
- * Supports edit, delete, and copy actions for credentials.
+ * Detail screen for a single expiry item (self-contained: own back arrow).
  */
 @Composable
 fun ExpiryDetailScreen(
-    group: ExpiryGroup,
-    onEditItem: (ExpiryItem) -> Unit,
-    onDeleteItem: (ExpiryItem) -> Unit,
+    item: ExpiryItem,
+    onBack: () -> Unit,
+    onEdit: (ExpiryItem) -> Unit,
+    onDelete: (ExpiryItem) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
-    var itemToDelete by remember { mutableStateOf<ExpiryItem?>(null) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    var passwordVisible by remember { mutableStateOf(false) }
 
-    Column(modifier = modifier.fillMaxSize()) {
-        LazyColumn(
-            contentPadding = PaddingValues(
-                horizontal = Dimens.SpacingLg,
-                vertical = Dimens.SpacingSm,
-                // Extra bottom padding for floating bottom bar
-            ),
-            verticalArrangement = Arrangement.spacedBy(Dimens.SpacingMd),
+    val now = System.currentTimeMillis()
+    val days = DateUtils.daysUntil(item.expiryDate)
+    val expired = item.expiryDate < now
+    val accent = when {
+        expired || days <= 7 -> ExpiredRed
+        days <= SOON_DAYS -> WarningAmber
+        else -> ActiveGreen
+    }
+
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background),
+    ) {
+        // Back arrow
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .statusBarsPadding()
+                .padding(horizontal = 8.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            if (group.hasMultiple) {
-                item {
-                    Text(
-                        text = "${group.itemCount} entries",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(bottom = Dimens.SpacingSm),
-                    )
+            IconButton(onClick = onBack) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "Back",
+                    tint = MaterialTheme.colorScheme.onBackground,
+                )
+            }
+        }
+
+        LazyColumn(
+            modifier = Modifier.weight(1f),
+            contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            item { HeroCard(item = item, days = days, expired = expired, accent = accent) }
+
+            item {
+                SectionCard(icon = Icons.Default.Description, title = "Overview") {
+                    if (item.provider.isNotBlank()) {
+                        DetailRow("Provider", item.provider)
+                    }
+                    item.amount?.let { DetailRow("Amount", CurrencyUtils.formatAmount(it)) }
+                    DetailRow("Purchased On", DateUtils.formatDate(item.purchasedDate))
+                    DetailRow("Expiry Date", DateUtils.formatDate(item.expiryDate), valueColor = accent)
                 }
             }
 
-            items(
-                items = group.items,
-                key = { it.id },
-            ) { item ->
-                ExpiryDetailCard(
-                    item = item,
-                    onEdit = { onEditItem(item) },
-                    onDelete = { itemToDelete = item },
-                    onCopy = { text, label -> copyToClipboard(context, text, label) },
-                )
+            if (!item.notes.isNullOrBlank()) {
+                item {
+                    SectionCard(icon = Icons.Default.Notes, title = "Notes") {
+                        Text(
+                            text = item.notes,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                    }
+                }
             }
 
-            // Bottom spacer for floating bar
-            item {
-                Spacer(modifier = Modifier.height(80.dp))
+            // Credentials, only if present
+            if (!item.username.isNullOrBlank() || !item.email.isNullOrBlank() || !item.password.isNullOrBlank()) {
+                item {
+                    SectionCard(icon = Icons.Default.Lock, title = "Credentials") {
+                        item.username?.takeIf { it.isNotBlank() }?.let {
+                            CopyRow("Username", it) { copyToClipboard(context, it, "Username") }
+                        }
+                        item.email?.takeIf { it.isNotBlank() }?.let {
+                            CopyRow("Email", it) { copyToClipboard(context, it, "Email") }
+                        }
+                        item.password?.takeIf { it.isNotBlank() }?.let { pwd ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = "Password",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                    Text(
+                                        text = if (passwordVisible) pwd else "••••••••",
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                    )
+                                }
+                                IconButton(onClick = { passwordVisible = !passwordVisible }, modifier = Modifier.size(32.dp)) {
+                                    Icon(
+                                        imageVector = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                                        contentDescription = if (passwordVisible) "Hide" else "Show",
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.size(20.dp),
+                                    )
+                                }
+                                IconButton(onClick = { copyToClipboard(context, pwd, "Password") }, modifier = Modifier.size(32.dp)) {
+                                    Icon(
+                                        imageVector = Icons.Default.ContentCopy,
+                                        contentDescription = "Copy password",
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(20.dp),
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
             }
+
+            item {
+                SectionCard(icon = Icons.Default.History, title = "History") {
+                    DetailRow("Added", DateUtils.formatDate(item.createdAt))
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f))
+                    DetailRow("Last Updated", DateUtils.formatDate(item.updatedAt))
+                }
+            }
+        }
+
+        // Bottom action bar
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = 12.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            ActionButton(
+                text = "Edit",
+                icon = Icons.Default.Edit,
+                container = MaterialTheme.colorScheme.primaryContainer,
+                content = MaterialTheme.colorScheme.onPrimaryContainer,
+                modifier = Modifier.weight(1f),
+                onClick = { onEdit(item) },
+            )
+            ActionButton(
+                text = "Delete",
+                icon = Icons.Default.Delete,
+                container = MaterialTheme.colorScheme.errorContainer,
+                content = MaterialTheme.colorScheme.error,
+                modifier = Modifier.weight(1f),
+                onClick = { showDeleteDialog = true },
+            )
         }
     }
 
-    // Delete confirmation dialog
-    itemToDelete?.let { item ->
+    if (showDeleteDialog) {
         TrackOneDeleteDialog(
             itemName = item.label.ifBlank { item.name },
-            onConfirm = {
-                onDeleteItem(item)
-                itemToDelete = null
-            },
-            onDismiss = { itemToDelete = null },
+            onConfirm = { onDelete(item); showDeleteDialog = false },
+            onDismiss = { showDeleteDialog = false },
         )
     }
 }
 
+// ── Hero card ─────────────────────────────────────────────────────────────────
+
 @Composable
-private fun ExpiryDetailCard(
-    item: ExpiryItem,
-    onEdit: () -> Unit,
-    onDelete: () -> Unit,
-    onCopy: (String, String) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    var passwordVisible by remember { mutableStateOf(false) }
-    val isExpired = DateUtils.isExpired(item.expiryDate)
-    val daysLeft = DateUtils.daysUntil(item.expiryDate)
-    val isUrgent = isExpired || daysLeft < 7
-
-    val urgencyColor = if (isUrgent) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
-    val bg = if (isExpired) MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.3f) else MaterialTheme.colorScheme.surface
-
-    androidx.compose.material3.Surface(
-        modifier = modifier
-            .fillMaxWidth()
-            .shadow(
-                elevation = 8.dp,
-                shape = RoundedCornerShape(24.dp),
-                spotColor = urgencyColor.copy(alpha = 0.2f),
-                ambientColor = urgencyColor.copy(alpha = 0.1f)
-            )
-            .border(
-                width = 1.dp,
-                brush = androidx.compose.ui.graphics.Brush.linearGradient(
-                    colors = listOf(urgencyColor.copy(alpha = 0.4f), urgencyColor.copy(alpha = 0.05f))
-                ),
-                shape = RoundedCornerShape(24.dp)
-            ),
-        shape = RoundedCornerShape(24.dp),
-        color = bg,
+private fun HeroCard(item: ExpiryItem, days: Long, expired: Boolean, accent: Color) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        color = MaterialTheme.colorScheme.surface,
+        shadowElevation = 1.dp,
+        tonalElevation = 1.dp,
     ) {
-        Column(modifier = Modifier.padding(24.dp)) {
-            // Header Row
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top
-            ) {
-                // Left: Title & Provider
-                Column(modifier = Modifier.weight(1f).padding(end = 16.dp)) {
+        Column(modifier = Modifier.padding(20.dp)) {
+            Text(
+                text = item.label.ifBlank { item.name },
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            val chip = item.label.ifBlank { item.provider }
+            if (chip.isNotBlank()) {
+                Spacer(modifier = Modifier.height(10.dp))
+                Surface(shape = RoundedCornerShape(8.dp), color = MaterialTheme.colorScheme.primaryContainer) {
                     Text(
-                        text = item.label.ifBlank { item.name },
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Black,
-                        color = MaterialTheme.colorScheme.onSurface
+                        text = chip,
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
                     )
-                    if (item.provider.isNotBlank()) {
-                        Spacer(modifier = Modifier.height(4.dp))
+                }
+            }
+
+            Spacer(modifier = Modifier.height(18.dp))
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                // Left: expiry date block
+                Column(modifier = Modifier.weight(1f)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.CalendarMonth,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(18.dp),
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = item.provider,
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.primary,
-                            fontWeight = FontWeight.Bold
+                            text = "Expiry Date",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
-                }
-                
-                // Right: Days Left Badge
-                Column(horizontalAlignment = Alignment.End) {
+                    Spacer(modifier = Modifier.height(6.dp))
                     Text(
-                        text = if (isExpired) "Expired" else "${daysLeft}d",
-                        style = MaterialTheme.typography.displaySmall,
-                        fontWeight = FontWeight.Black,
-                        color = urgencyColor
-                    )
-                    Text(
-                        text = if (isExpired) "ago" else "left",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = urgencyColor.copy(alpha = 0.8f),
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Action Buttons Row (Edit/Delete)
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End
-            ) {
-                IconButton(
-                    onClick = onEdit,
-                    modifier = Modifier.size(36.dp).background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f), CircleShape)
-                ) {
-                    Icon(Icons.Default.Edit, contentDescription = "Edit", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
-                }
-                Spacer(modifier = Modifier.width(12.dp))
-                IconButton(
-                    onClick = onDelete,
-                    modifier = Modifier.size(36.dp).background(MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f), CircleShape)
-                ) {
-                    Icon(Icons.Default.Delete, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(16.dp))
-                }
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-            DashedDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // Info Details (Receipt Style)
-            ReceiptRow(label = "Purchased", value = DateUtils.formatDate(item.purchasedDate))
-            Spacer(modifier = Modifier.height(16.dp))
-            ReceiptRow(
-                label = "Expires", 
-                value = DateUtils.formatDate(item.expiryDate), 
-                valueColor = urgencyColor
-            )
-            
-            item.amount?.let { amount ->
-                Spacer(modifier = Modifier.height(16.dp))
-                ReceiptRow(label = "Amount", value = CurrencyUtils.formatAmount(amount))
-            }
-            
-            if (!item.notes.isNullOrBlank()) {
-                Spacer(modifier = Modifier.height(20.dp))
-                Column {
-                    Text(
-                        text = "Notes",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = item.notes,
-                        style = MaterialTheme.typography.bodyLarge,
+                        text = DateUtils.formatDate(item.expiryDate),
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface,
-                        fontWeight = FontWeight.Medium
+                    )
+                    Text(
+                        text = DateUtils.formatDate(item.expiryDate, "EEEE"),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-            }
 
-            // Credentials Vault Section
-            if (!item.username.isNullOrBlank() || !item.email.isNullOrBlank() || !item.password.isNullOrBlank()) {
-                Spacer(modifier = Modifier.height(24.dp))
-                
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(
-                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
-                            shape = RoundedCornerShape(16.dp)
-                        )
-                        .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f), RoundedCornerShape(16.dp))
+                VerticalDivider(
+                    modifier = Modifier.height(64.dp).padding(horizontal = 16.dp),
+                    color = MaterialTheme.colorScheme.outlineVariant,
+                )
+
+                // Right: status box
+                Surface(
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(14.dp),
+                    color = accent.copy(alpha = 0.12f),
                 ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
+                    Column(modifier = Modifier.padding(14.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.Lock, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
-                            Spacer(modifier = Modifier.width(8.dp))
+                            Icon(
+                                imageVector = Icons.Default.Schedule,
+                                contentDescription = null,
+                                tint = accent,
+                                modifier = Modifier.size(18.dp),
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
                             Text(
-                                text = "Secure Credentials",
+                                text = when {
+                                    expired -> "Expired"
+                                    days == 0L -> "Today"
+                                    days == 1L -> "1 Day Left"
+                                    else -> "$days Days Left"
+                                },
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary
+                                color = accent,
                             )
                         }
-                        Spacer(modifier = Modifier.height(16.dp))
-                        
-                        item.username?.takeIf { it.isNotBlank() }?.let { username ->
-                            CopyableRow(
-                                icon = Icons.Default.Person,
-                                label = "Username",
-                                value = username
-                            ) { onCopy(username, "Username") }
-                            Spacer(modifier = Modifier.height(12.dp))
-                        }
-                        item.email?.takeIf { it.isNotBlank() }?.let { email ->
-                            CopyableRow(
-                                icon = Icons.Default.Email,
-                                label = "Email",
-                                value = email
-                            ) { onCopy(email, "Email") }
-                            Spacer(modifier = Modifier.height(12.dp))
-                        }
-                        item.password?.takeIf { it.isNotBlank() }?.let { password ->
-                            PasswordToggleRow(
-                                icon = Icons.Default.Lock,
-                                password = password,
-                                passwordVisible = passwordVisible,
-                                onToggleVisibility = { passwordVisible = !passwordVisible },
-                                onCopy = { onCopy(password, "Password") },
-                            )
-                        }
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = if (expired) {
+                                "Expired on ${DateUtils.formatDate(item.expiryDate, "EEEE")}"
+                            } else {
+                                "Will expire on ${DateUtils.formatDate(item.expiryDate, "EEEE")}"
+                            },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
                     }
                 }
             }
@@ -323,129 +346,81 @@ private fun ExpiryDetailCard(
     }
 }
 
+// ── Section card + rows ───────────────────────────────────────────────────────
+
 @Composable
-private fun ReceiptRow(
-    label: String, 
-    value: String,
-    valueColor: Color = MaterialTheme.colorScheme.onSurface
+private fun SectionCard(
+    icon: ImageVector,
+    title: String,
+    content: @Composable () -> Unit,
 ) {
-    Row(
+    Surface(
         modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        color = MaterialTheme.colorScheme.surface,
+        shadowElevation = 1.dp,
+        tonalElevation = 1.dp,
+    ) {
+        Column(modifier = Modifier.padding(20.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(20.dp),
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+            }
+            Spacer(modifier = Modifier.height(14.dp))
+            content()
+        }
+    }
+}
+
+@Composable
+private fun DetailRow(label: String, value: String, valueColor: Color = Color.Unspecified) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
             text = label,
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Text(
             text = value,
             style = MaterialTheme.typography.bodyLarge,
-            color = valueColor,
-            fontWeight = FontWeight.SemiBold
+            fontWeight = FontWeight.SemiBold,
+            color = if (valueColor == Color.Unspecified) MaterialTheme.colorScheme.onSurface else valueColor,
         )
     }
 }
 
 @Composable
-private fun DashedDivider(
-    modifier: Modifier = Modifier,
-    color: Color = Color.Gray,
-    thickness: androidx.compose.ui.unit.Dp = 1.dp,
-    dashLength: androidx.compose.ui.unit.Dp = 6.dp
-) {
-    Canvas(modifier = modifier.fillMaxWidth().height(thickness)) {
-        drawLine(
-            color = color,
-            start = Offset(0f, size.height / 2),
-            end = Offset(size.width, size.height / 2),
-            strokeWidth = thickness.toPx(),
-            pathEffect = PathEffect.dashPathEffect(floatArrayOf(dashLength.toPx(), dashLength.toPx()), 0f)
-        )
-    }
-}
-
-@Composable
-private fun PasswordToggleRow(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    password: String,
-    passwordVisible: Boolean,
-    onToggleVisibility: () -> Unit,
-    onCopy: () -> Unit,
-) {
+private fun CopyRow(label: String, value: String, onCopy: () -> Unit) {
     Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically
+        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.size(20.dp)
-        )
-        Spacer(modifier = Modifier.width(12.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = "Password",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Text(
-                text = if (passwordVisible) password else "••••••••",
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Medium
-            )
-        }
-        Row {
-            IconButton(onClick = onToggleVisibility, modifier = Modifier.size(32.dp)) {
-                Icon(
-                    imageVector = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                    contentDescription = if (passwordVisible) "Hide password" else "Show password",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(20.dp)
-                )
-            }
-            IconButton(onClick = onCopy, modifier = Modifier.size(32.dp)) {
-                Icon(
-                    imageVector = Icons.Default.ContentCopy,
-                    contentDescription = "Copy Password",
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(20.dp)
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun CopyableRow(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    label: String,
-    value: String,
-    onCopy: () -> Unit,
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.size(20.dp)
-        )
-        Spacer(modifier = Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = label,
-                style = MaterialTheme.typography.labelSmall,
+                style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Text(
                 text = value,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Medium
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface,
             )
         }
         IconButton(onClick = onCopy, modifier = Modifier.size(32.dp)) {
@@ -453,7 +428,39 @@ private fun CopyableRow(
                 imageVector = Icons.Default.ContentCopy,
                 contentDescription = "Copy $label",
                 tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(20.dp)
+                modifier = Modifier.size(20.dp),
+            )
+        }
+    }
+}
+
+@Composable
+private fun ActionButton(
+    text: String,
+    icon: ImageVector,
+    container: Color,
+    content: Color,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
+) {
+    Surface(
+        onClick = onClick,
+        modifier = modifier,
+        shape = RoundedCornerShape(16.dp),
+        color = container,
+    ) {
+        Row(
+            modifier = Modifier.padding(vertical = 14.dp),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(imageVector = icon, contentDescription = null, tint = content, modifier = Modifier.size(18.dp))
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = text,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = content,
             )
         }
     }
@@ -463,4 +470,3 @@ private fun copyToClipboard(context: Context, text: String, label: String) {
     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
     clipboard.setPrimaryClip(ClipData.newPlainText(label, text))
 }
-

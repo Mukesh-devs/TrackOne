@@ -1,4 +1,6 @@
 pluginManagement {
+    // Composite build that provides the `trackone.android.*` convention plugins.
+    includeBuild("build-logic")
     repositories {
         google {
             content {

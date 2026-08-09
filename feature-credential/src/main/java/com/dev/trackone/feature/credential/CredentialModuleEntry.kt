@@ -19,7 +19,7 @@ class CredentialModuleEntry @Inject constructor() : ModuleEntry {
 
     @androidx.compose.material3.ExperimentalMaterial3Api
     @Composable
-    override fun Content(onSwipeLeft: () -> Unit, onSwipeRight: () -> Unit) {
-        CredentialNavigation(onSwipeLeft = onSwipeLeft, onSwipeRight = onSwipeRight)
+    override fun Content() {
+        CredentialNavigation()
     }
 }

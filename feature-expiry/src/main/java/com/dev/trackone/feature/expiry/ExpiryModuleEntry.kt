@@ -19,7 +19,7 @@ class ExpiryModuleEntry @Inject constructor() : ModuleEntry {
     override val order: Int = 0
 
     @Composable
-    override fun Content(onSwipeLeft: () -> Unit, onSwipeRight: () -> Unit) {
-        ExpiryNavigation(onSwipeLeft = onSwipeLeft, onSwipeRight = onSwipeRight)
+    override fun Content() {
+        ExpiryNavigation()
     }
 }

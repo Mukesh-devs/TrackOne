@@ -82,20 +82,9 @@ class ExpiryViewModel @Inject constructor(
     // ========== Search ==========
 
     fun onSearchQueryChange(query: String) {
+        // Home filters the flat item list locally from [uiState.allItems], so the
+        // ViewModel just needs to hold the current query. (No extra DB collector.)
         _uiState.update { it.copy(searchQuery = query) }
-        if (query.isBlank()) {
-            loadData()
-        } else {
-            viewModelScope.launch {
-                repository.search(query)
-                    .catch { }
-                    .collect { results ->
-                        val groups = results.groupBy { it.provider }
-                            .map { (provider, items) -> ExpiryGroup(name = provider, items = items) }
-                        _uiState.update { it.copy(groups = groups) }
-                    }
-            }
-        }
     }
 
     fun toggleSearch() {
@@ -111,9 +100,10 @@ class ExpiryViewModel @Inject constructor(
     // ========== Selection ==========
 
     fun refresh() {
+        // Data is Flow-backed and always live; this just drives the pull indicator.
         viewModelScope.launch {
             _uiState.update { it.copy(isRefreshing = true) }
-            kotlinx.coroutines.delay(800) // Fake delay for UX
+            loadData()
             _uiState.update { it.copy(isRefreshing = false) }
         }
     }

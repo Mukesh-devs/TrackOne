@@ -252,15 +252,6 @@ private fun TopBar(
                     tint = Color(0xFF5F6368),
                 )
             }
-
-            // Notification bell
-            IconButton(onClick = { /* Notification action placeholder */ }) {
-                Icon(
-                    imageVector = Icons.Default.Notifications,
-                    contentDescription = "Notifications",
-                    tint = Color(0xFF5F6368),
-                )
-            }
         }
     }
 }

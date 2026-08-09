@@ -65,32 +65,13 @@ fun TrackOneBottomBar(
     items: List<BottomNavItem>,
     selectedRoute: String,
     onItemSelected: (BottomNavItem) -> Unit,
-    onSwipeLeft: () -> Unit = {},
-    onSwipeRight: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     Surface(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 24.dp)
-            .padding(bottom = 12.dp)
-            .pointerInput(Unit) {
-                var totalDrag = 0f
-                detectHorizontalDragGestures(
-                    onDragEnd = {
-                        if (totalDrag > 50) {
-                            onSwipeRight()
-                        } else if (totalDrag < -50) {
-                            onSwipeLeft()
-                        }
-                        totalDrag = 0f
-                    },
-                    onDragCancel = { totalDrag = 0f }
-                ) { change, dragAmount ->
-                    change.consume()
-                    totalDrag += dragAmount
-                }
-            },
+            .padding(bottom = 12.dp),
         shape = RoundedCornerShape(28.dp),
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
         tonalElevation = 4.dp,

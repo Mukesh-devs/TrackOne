@@ -298,69 +298,29 @@ fun TrackOneApp(
                     androidx.activity.compose.BackHandler(enabled = true) {
                         showDashboard = true
                     }
-                    // Module pager view
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(bottom = innerPadding.calculateBottomPadding()),
-                    ) {
-                        // Module indicator header
-                        com.dev.trackone.core.ui.theme.DynamicModuleTheme(moduleTitle = currentModuleTitle) {
-                            ModuleIndicator(
-                                modules = modules,
-                                currentPage = currentModuleIndex,
-                                onMenuClick = { coroutineScope.launch { drawerState.open() } },
-                                onCloudClick = { showSyncSheet = true },
-                                isBackupPending = isBackupPending,
-                                isSignedIn = isSignedIn,
-                                modifier = Modifier.fillMaxWidth(),
+                    // Full-screen module — each module owns its header + bottom nav.
+                    // No app-level chrome (drawer / cloud / shared top bar) here.
+                    androidx.compose.animation.AnimatedContent(
+                        targetState = currentModuleIndex,
+                        transitionSpec = {
+                            androidx.compose.animation.fadeIn(
+                                androidx.compose.animation.core.tween(220)
+                            ) togetherWith androidx.compose.animation.fadeOut(
+                                androidx.compose.animation.core.tween(220)
                             )
-                        }
-
-                        // Module pages
-                        androidx.compose.animation.AnimatedContent(
-                            targetState = currentModuleIndex,
-                            transitionSpec = {
-                                if (targetState > initialState) {
-                                    (androidx.compose.animation.slideInHorizontally { width -> width } + androidx.compose.animation.fadeIn()).togetherWith(
-                                        androidx.compose.animation.slideOutHorizontally { width -> -width } + androidx.compose.animation.fadeOut()
-                                    )
-                                } else {
-                                    (androidx.compose.animation.slideInHorizontally { width -> -width } + androidx.compose.animation.fadeIn()).togetherWith(
-                                        androidx.compose.animation.slideOutHorizontally { width -> width } + androidx.compose.animation.fadeOut()
-                                    )
-                                }
-                            },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .weight(1f),
-                            label = "ModuleTransition"
-                        ) { targetIndex ->
-                            Surface(
-                                modifier = Modifier.fillMaxSize(),
-                                color = MaterialTheme.colorScheme.background,
-                            ) {
-                                modules[targetIndex].Content(
-                                    onSwipeLeft = {
-                                        currentModuleIndex = (currentModuleIndex + 1).coerceAtMost(modules.size - 1)
-                                    },
-                                    onSwipeRight = {
-                                        currentModuleIndex = (currentModuleIndex - 1).coerceAtLeast(0)
-                                    }
-                                )
-                            }
+                        },
+                        modifier = Modifier.fillMaxSize(),
+                        label = "ModuleTransition",
+                    ) { targetIndex ->
+                        Surface(
+                            modifier = Modifier.fillMaxSize(),
+                            color = MaterialTheme.colorScheme.background,
+                        ) {
+                            modules[targetIndex].Content()
                         }
                     }
                 }
                 
-                val userPreferences by viewModel.userPreferences.collectAsStateWithLifecycle()
-                if (userPreferences?.hasSeenTour == false && !showDashboard) {
-                    GuidedTourOverlay(
-                        onComplete = {
-                            viewModel.completeTour()
-                        }
-                    )
-                }
             }
         }
     }
@@ -380,6 +340,15 @@ fun TrackOneApp(
                 onRestoreClick = { viewModel.onRestore() }
             )
         }
+    }
+
+    // System back closes the Backup / Settings overlays instead of exiting the app.
+    androidx.activity.compose.BackHandler(enabled = showBackupScreen) {
+        showBackupScreen = false
+        showSettingsScreen = true
+    }
+    androidx.activity.compose.BackHandler(enabled = showSettingsScreen && !showBackupScreen) {
+        showSettingsScreen = false
     }
 
     androidx.compose.animation.AnimatedVisibility(
@@ -425,68 +394,6 @@ fun TrackOneApp(
     }
 }
 
-@Composable
-fun GuidedTourOverlay(onComplete: () -> Unit) {
-    val interactionSource = androidx.compose.runtime.remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.7f))
-            .clickable(
-                interactionSource = interactionSource,
-                indication = null,
-                onClick = onComplete
-            )
-    ) {
-        Column(
-            modifier = Modifier.fillMaxSize(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            Icon(
-                imageVector = androidx.compose.material.icons.Icons.Default.Swipe,
-                contentDescription = null,
-                tint = Color(0xFF00B4D8),
-                modifier = Modifier.size(64.dp)
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(
-                text = "Swipe here to switch tabs",
-                color = Color.White,
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold
-            )
-        }
-        
-        Column(
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(bottom = 120.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Icon(
-                imageVector = androidx.compose.material.icons.Icons.Default.Swipe,
-                contentDescription = null,
-                tint = Color(0xFF00B4D8),
-                modifier = Modifier.size(48.dp)
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = "Swipe the bottom bar to switch modules",
-                color = Color.White,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Medium
-            )
-            Spacer(modifier = Modifier.height(24.dp))
-            Button(
-                onClick = onComplete,
-                colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = Color(0xFF00B4D8))
-            ) {
-                Text("Got it!", color = Color.White, fontWeight = FontWeight.Bold)
-            }
-        }
-    }
-}
 /**
  * Module indicator showing the current module with icon, title, and page dots.
  */
