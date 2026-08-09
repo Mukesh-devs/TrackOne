@@ -1,6 +1,5 @@
 package com.dev.trackone.feature.expense.presentation.screen
 
-import android.widget.Toast
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -15,29 +14,28 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AccountBalanceWallet
+import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.KeyboardArrowRight
+import androidx.compose.material.icons.outlined.FilterList
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -51,42 +49,41 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.dev.trackone.core.common.util.CurrencyUtils
-import com.dev.trackone.core.common.util.DateUtils
-import com.dev.trackone.core.ui.component.TrackOneEmptyState
 import com.dev.trackone.feature.expense.domain.model.ExpenseItem
 import com.dev.trackone.feature.expense.presentation.ExpenseUiState
 import com.dev.trackone.feature.expense.presentation.TimePeriod
 import java.util.Calendar
+
+private val HeroGradient = Brush.linearGradient(listOf(Color(0xFF1A73E8), Color(0xFF0B57D0)))
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ExpenseHomeScreen(
     uiState: ExpenseUiState,
     dateLabel: String,
-    onSearchQueryChange: (String) -> Unit,
     onPeriodChange: (TimePeriod) -> Unit,
     onNavigateDate: (Boolean) -> Unit,
+    onSelectMonth: (Long) -> Unit,
     onItemClick: (ExpenseItem) -> Unit,
     onViewAllClick: () -> Unit,
-    onMenuClick: () -> Unit,
     isRefreshing: Boolean = false,
     onRefresh: () -> Unit = {},
-    onScrollingDown: ((Boolean) -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
-    val context = LocalContext.current
-    val notImplementedToast = {
-        Toast.makeText(context, "Coming soon!", Toast.LENGTH_SHORT).show()
+    val recent = remember(uiState.items) {
+        uiState.items.sortedByDescending { it.date }.take(6)
+    }
+    val periodWord = when (uiState.selectedPeriod) {
+        TimePeriod.DAY -> "Today"
+        TimePeriod.MONTH -> "This Month"
+        TimePeriod.YEAR -> "This Year"
     }
 
-    androidx.compose.material3.pulltorefresh.PullToRefreshBox(
+    PullToRefreshBox(
         isRefreshing = isRefreshing,
         onRefresh = onRefresh,
         modifier = modifier
@@ -95,210 +92,308 @@ fun ExpenseHomeScreen(
     ) {
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            contentPadding = PaddingValues(bottom = 140.dp),
         ) {
-                // Hero Card
-                item {
-                    ExpenseHeroCard(
-                        amount = uiState.totalExpense,
-                        monthLabel = DateUtils.formatMonthYear(System.currentTimeMillis())
-                    )
-                }
+            item { Header(selectedPeriod = uiState.selectedPeriod, onPeriodChange = onPeriodChange) }
 
-                // Recent Transactions Header
-                item {
+            item {
+                HeroCard(
+                    totalSpent = uiState.totalExpense,
+                    periodWord = periodWord,
+                    dateLabel = dateLabel,
+                    onNavigateDate = onNavigateDate,
+                    onSelectMonth = onSelectMonth,
+                    expenseItems = uiState.expenseItems,
+                )
+            }
+
+            item {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = "Recent Transactions",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onBackground,
+                    )
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .clickable { onViewAllClick() }
+                            .padding(4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
-                            text = "Recent Transactions",
-                            style = MaterialTheme.typography.titleMedium,
+                            text = "View All",
+                            style = MaterialTheme.typography.labelLarge,
                             fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onBackground
-                        )
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
+                            color = MaterialTheme.colorScheme.primary,
                             modifier = Modifier
-                                .clip(RoundedCornerShape(12.dp))
-                                .clickable { onViewAllClick() }
-                                .padding(horizontal = 8.dp, vertical = 4.dp)
-                        ) {
-                            Text(
-                                text = "View All",
-                                style = MaterialTheme.typography.labelLarge,
-                                fontWeight = FontWeight.SemiBold,
-                                color = Color(0xFFE65100) // Orange color
-                            )
-                            Icon(
-                                imageVector = Icons.Default.ChevronRight,
-                                contentDescription = "View All",
-                                tint = Color(0xFFE65100),
-                                modifier = Modifier.size(18.dp)
-                            )
+                                .padding(end = 2.dp),
+                        )
+                        Icon(
+                            imageVector = Icons.Default.KeyboardArrowRight,
+                            contentDescription = "View all transactions",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier
+                                .size(18.dp),
+                        )
+                    }
+                }
+            }
+
+            if (recent.isEmpty()) {
+                item {
+                    Text(
+                        text = "No transactions in $periodWord. Tap + to add one.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 24.dp),
+                    )
+                }
+            } else {
+                item {
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 20.dp),
+                        shape = RoundedCornerShape(20.dp),
+                        color = MaterialTheme.colorScheme.surface,
+                        shadowElevation = 1.dp,
+                        tonalElevation = 1.dp,
+                    ) {
+                        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) {
+                            recent.forEachIndexed { index, item ->
+                                ExpenseListItem(item = item, onClick = { onItemClick(item) })
+                                if (index != recent.lastIndex) {
+                                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                                }
+                            }
                         }
                     }
                 }
-
-                // Recent Transactions List (max 5)
-                val recentItems = uiState.items.take(5)
-                if (recentItems.isEmpty()) {
-                    item {
-                        TrackOneEmptyState(
-                            icon = Icons.Default.Add,
-                            title = "No transactions",
-                            subtitle = "Add some expenses to see them here",
-                            modifier = Modifier.padding(vertical = 32.dp)
-                        )
-                    }
-                } else {
-                    items(recentItems, key = { it.id }) { item ->
-                        ExpenseListItem(
-                            item = item,
-                            onClick = { onItemClick(item) },
-                            modifier = Modifier.padding(bottom = 8.dp)
-                        )
-                    }
-                }
+            }
         }
     }
 }
 
+// ── Header ────────────────────────────────────────────────────────────────────
+
 @Composable
-fun ExpenseHeroCard(
-    amount: Double,
-    monthLabel: String,
-    modifier: Modifier = Modifier
+private fun Header(
+    selectedPeriod: TimePeriod,
+    onPeriodChange: (TimePeriod) -> Unit,
+) {
+    var menuOpen by remember { mutableStateOf(false) }
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .statusBarsPadding()
+            .padding(start = 20.dp, end = 8.dp, top = 12.dp, bottom = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            imageVector = Icons.Default.AccountBalanceWallet,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(26.dp),
+        )
+        Spacer(modifier = Modifier.width(10.dp))
+        Text(
+            text = "Expense Tracker",
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onBackground,
+            modifier = Modifier.weight(1f),
+        )
+        Box {
+            IconButton(onClick = { menuOpen = true }) {
+                Icon(
+                    imageVector = Icons.Outlined.FilterList,
+                    contentDescription = "Change period",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                TimePeriod.entries.forEach { period ->
+                    DropdownMenuItem(
+                        text = { Text(period.label) },
+                        onClick = {
+                            onPeriodChange(period)
+                            menuOpen = false
+                        },
+                    )
+                }
+            }
+        }
+    }
+}
+
+// ── Hero card ─────────────────────────────────────────────────────────────────
+
+@Composable
+private fun HeroCard(
+    totalSpent: Double,
+    periodWord: String,
+    dateLabel: String,
+    onNavigateDate: (Boolean) -> Unit,
+    onSelectMonth: (Long) -> Unit,
+    expenseItems: List<ExpenseItem>,
 ) {
     Surface(
-        modifier = modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp),
         shape = RoundedCornerShape(24.dp),
-        shadowElevation = 8.dp,
-        color = Color.Transparent
+        color = Color.Transparent,
+        shadowElevation = 4.dp,
     ) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(
-                    brush = Brush.linearGradient(
-                        colors = listOf(
-                            Color(0xFFFF9800), // Vibrant orange
-                            Color(0xFFE65100)  // Deep orange
-                        )
-                    )
-                )
-                .padding(24.dp)
+                .background(HeroGradient, RoundedCornerShape(24.dp))
+                .padding(horizontal = 18.dp, vertical = 14.dp),
         ) {
-            // Content
             Column {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.Top
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
                         text = "Total Spent",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Color.White.copy(alpha = 0.9f)
+                        style = MaterialTheme.typography.titleMedium,
+                        color = Color.White.copy(alpha = 0.9f),
                     )
-                    
-                    // Month dropdown pill
-                    Box {
-                        var expanded by remember { mutableStateOf(false) }
-                        Surface(
-                            shape = RoundedCornerShape(20.dp),
-                            color = Color.White.copy(alpha = 0.9f),
-                            contentColor = Color(0xFFE65100),
-                            modifier = Modifier.clickable { expanded = true }
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
-                            ) {
-                                Text(
-                                    text = monthLabel,
-                                    style = MaterialTheme.typography.labelSmall,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Icon(
-                                    imageVector = Icons.Default.KeyboardArrowDown,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                            }
-                        }
-                        
-                        DropdownMenu(
-                            expanded = expanded,
-                            onDismissRequest = { expanded = false },
-                            modifier = Modifier.background(MaterialTheme.colorScheme.surface)
-                        ) {
-                            val context = LocalContext.current
-                            val months = listOf("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
-                            months.forEach { month ->
-                                DropdownMenuItem(
-                                    text = { Text(month) },
-                                    onClick = {
-                                        expanded = false
-                                        Toast.makeText(context, "$month selected (Coming soon)", Toast.LENGTH_SHORT).show()
-                                    }
-                                )
-                            }
-                        }
-                    }
+                    MonthPickerChip(dateLabel = dateLabel, onSelectMonth = onSelectMonth)
                 }
-                
-                Spacer(modifier = Modifier.height(8.dp))
-                
-                Text(
-                    text = CurrencyUtils.formatAmount(amount),
-                    style = MaterialTheme.typography.headlineLarge.copy(fontSize = 36.sp),
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
-                )
-                
+
                 Spacer(modifier = Modifier.height(4.dp))
-                
                 Text(
-                    text = "This Month",
+                    text = CurrencyUtils.formatAmount(totalSpent),
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White,
+                )
+                Text(
+                    text = periodWord,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Color.White.copy(alpha = 0.8f)
+                    color = Color.White.copy(alpha = 0.85f),
                 )
-            }
-            
-            // Decorative line chart at the bottom right
-            Canvas(
-                modifier = Modifier
-                    .fillMaxWidth(0.6f)
-                    .height(60.dp)
-                    .align(Alignment.BottomEnd)
-            ) {
-                val path = Path().apply {
-                    moveTo(0f, size.height)
-                    quadraticBezierTo(size.width * 0.1f, size.height * 0.5f, size.width * 0.3f, size.height * 0.7f)
-                    quadraticBezierTo(size.width * 0.5f, size.height * 0.9f, size.width * 0.6f, size.height * 0.4f)
-                    quadraticBezierTo(size.width * 0.7f, 0f, size.width * 0.85f, size.height * 0.3f)
-                    quadraticBezierTo(size.width * 0.95f, size.height * 0.5f, size.width, size.height * 0.4f)
-                }
-                
-                drawPath(
-                    path = path,
-                    color = Color.White.copy(alpha = 0.5f),
-                    style = Stroke(
-                        width = 4.dp.toPx(),
-                        cap = StrokeCap.Round,
-                        join = StrokeJoin.Round
-                    )
+
+                Spacer(modifier = Modifier.height(8.dp))
+                Sparkline(
+                    values = remember(expenseItems) { dailyTotals(expenseItems) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(34.dp),
                 )
-                
-                // Draw dots at peaks
-                drawCircle(color = Color.White, radius = 6.dp.toPx(), center = Offset(size.width * 0.3f, size.height * 0.7f))
-                drawCircle(color = Color.White, radius = 6.dp.toPx(), center = Offset(size.width * 0.6f, size.height * 0.4f))
-                drawCircle(color = Color.White, radius = 6.dp.toPx(), center = Offset(size.width * 0.85f, size.height * 0.3f))
             }
         }
     }
+}
+
+/** Chip showing the current period label; tapping opens a dropdown of recent months. */
+@Composable
+private fun MonthPickerChip(dateLabel: String, onSelectMonth: (Long) -> Unit) {
+    var open by remember { mutableStateOf(false) }
+    val months = remember { recentMonths() }
+    Box {
+        Surface(
+            onClick = { open = true },
+            shape = RoundedCornerShape(20.dp),
+            color = Color.White.copy(alpha = 0.18f),
+        ) {
+            Row(
+                modifier = Modifier.padding(start = 12.dp, end = 8.dp, top = 6.dp, bottom = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = dateLabel,
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White,
+                )
+                Icon(
+                    imageVector = Icons.Default.KeyboardArrowDown,
+                    contentDescription = "Choose month",
+                    tint = Color.White,
+                    modifier = Modifier.size(18.dp),
+                )
+            }
+        }
+        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            months.forEach { (label, millis) ->
+                DropdownMenuItem(
+                    text = { Text(label) },
+                    onClick = {
+                        onSelectMonth(millis)
+                        open = false
+                    },
+                )
+            }
+        }
+    }
+}
+
+/** Last 12 months as (label, first-of-month millis), newest first. */
+private fun recentMonths(): List<Pair<String, Long>> {
+    val out = ArrayList<Pair<String, Long>>(12)
+    val cal = Calendar.getInstance()
+    repeat(12) {
+        cal.set(Calendar.DAY_OF_MONTH, 1)
+        cal.set(Calendar.HOUR_OF_DAY, 12)
+        cal.set(Calendar.MINUTE, 0)
+        cal.set(Calendar.SECOND, 0)
+        cal.set(Calendar.MILLISECOND, 0)
+        val label = com.dev.trackone.core.common.util.DateUtils.formatMonthYear(cal.timeInMillis)
+        out.add(label to cal.timeInMillis)
+        cal.add(Calendar.MONTH, -1)
+    }
+    return out
+}
+
+@Composable
+private fun Sparkline(values: List<Float>, modifier: Modifier = Modifier) {
+    val line = Color.White
+    Canvas(modifier = modifier) {
+        if (values.size < 2) {
+            // Flat baseline
+            drawLine(
+                color = line.copy(alpha = 0.6f),
+                start = Offset(0f, size.height * 0.7f),
+                end = Offset(size.width, size.height * 0.7f),
+                strokeWidth = 3f,
+                cap = StrokeCap.Round,
+            )
+            return@Canvas
+        }
+        val maxV = values.max().coerceAtLeast(1f)
+        val stepX = size.width / (values.size - 1)
+        val points = values.mapIndexed { i, v ->
+            Offset(i * stepX, size.height - (v / maxV) * size.height * 0.9f - size.height * 0.05f)
+        }
+        val path = Path().apply {
+            moveTo(points.first().x, points.first().y)
+            for (p in points.drop(1)) lineTo(p.x, p.y)
+        }
+        drawPath(path, color = line.copy(alpha = 0.9f), style = Stroke(width = 3f, cap = StrokeCap.Round))
+    }
+}
+
+/** Buckets expense amounts by day (in date order) for the sparkline. */
+private fun dailyTotals(items: List<ExpenseItem>): List<Float> {
+    if (items.isEmpty()) return emptyList()
+    val byDay = sortedMapOf<Int, Float>()
+    for (item in items) {
+        val cal = Calendar.getInstance().apply { timeInMillis = item.date }
+        val key = cal.get(Calendar.YEAR) * 1000 + cal.get(Calendar.DAY_OF_YEAR)
+        byDay[key] = (byDay[key] ?: 0f) + item.amount.toFloat()
+    }
+    return byDay.values.toList()
 }

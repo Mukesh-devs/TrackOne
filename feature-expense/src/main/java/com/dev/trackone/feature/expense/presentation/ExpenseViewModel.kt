@@ -7,11 +7,15 @@ import com.dev.trackone.feature.expense.domain.model.ExpenseItem
 import com.dev.trackone.feature.expense.domain.model.PaymentMode
 import com.dev.trackone.feature.expense.domain.repository.ExpenseRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import com.dev.trackone.core.common.util.DateUtils
@@ -30,7 +34,45 @@ class ExpenseViewModel @Inject constructor(
     val formState: StateFlow<ExpenseFormState> = _formState.asStateFlow()
 
     init {
-        loadData()
+        observePeriodData()
+    }
+
+    /**
+     * Single reactive pipeline: whenever the selected period or date changes it
+     * re-subscribes (via flatMapLatest, cancelling the previous range) to the
+     * Room flows for that range. Because these are live Room flows, inserts/edits/
+     * deletes show up immediately — no manual refresh needed.
+     */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private fun observePeriodData() {
+        viewModelScope.launch {
+            _uiState
+                .map { it.selectedPeriod to it.currentDate }
+                .distinctUntilChanged()
+                .flatMapLatest { (period, date) ->
+                    val (start, end) = getDateRange(period, date)
+                    combine(
+                        repository.getByDateRange(start, end),
+                        repository.getTotalIncome(start, end),
+                        repository.getTotalExpense(start, end),
+                    ) { items, totalInc, totalExp -> Triple(items, totalInc, totalExp) }
+                }
+                .catch { e -> _uiState.update { it.copy(isLoading = false, error = e.message ?: "Unknown error") } }
+                .collect { (items, totalInc, totalExp) ->
+                    _uiState.update { s ->
+                        s.copy(
+                            isLoading = false,
+                            items = items,
+                            incomeItems = items.filter { it.isIncome },
+                            expenseItems = items.filter { !it.isIncome },
+                            totalIncome = totalInc,
+                            totalExpense = totalExp,
+                            balance = totalInc - totalExp,
+                            error = null,
+                        )
+                    }
+                }
+        }
     }
 
     private fun getDateRange(period: TimePeriod, dateMillis: Long): Pair<Long, Long> {
@@ -61,43 +103,16 @@ class ExpenseViewModel @Inject constructor(
         }
     }
 
-    private fun loadData() {
-        val state = _uiState.value
-        val (start, end) = getDateRange(state.selectedPeriod, state.currentDate)
-
-        viewModelScope.launch {
-            combine(
-                repository.getByDateRange(start, end),
-                repository.getTotalIncome(start, end),
-                repository.getTotalExpense(start, end),
-            ) { items, totalInc, totalExp ->
-                _uiState.update { s ->
-                    s.copy(
-                        isLoading = false,
-                        items = items,
-                        incomeItems = items.filter { it.isIncome },
-                        expenseItems = items.filter { !it.isIncome },
-                        totalIncome = totalInc,
-                        totalExpense = totalExp,
-                        balance = totalInc - totalExp,
-                        error = null,
-                    )
-                }
-            }
-                .catch { e ->
-                    _uiState.update {
-                        it.copy(isLoading = false, error = e.message ?: "Unknown error")
-                    }
-                }
-                .collect {}
-        }
-    }
-
     // ========== Period Navigation ==========
 
     fun setTimePeriod(period: TimePeriod) {
+        // Reset to the CURRENT date whenever the period type changes.
         _uiState.update { it.copy(selectedPeriod = period, currentDate = System.currentTimeMillis()) }
-        loadData()
+    }
+
+    /** Jump the current view to a specific month (used by the Home month dropdown). */
+    fun selectMonth(monthMillis: Long) {
+        _uiState.update { it.copy(selectedPeriod = TimePeriod.MONTH, currentDate = monthMillis) }
     }
 
     fun navigateDate(forward: Boolean) {
@@ -109,16 +124,12 @@ class ExpenseViewModel @Inject constructor(
             TimePeriod.YEAR -> cal.add(Calendar.YEAR, if (forward) 1 else -1)
         }
         _uiState.update { it.copy(currentDate = cal.timeInMillis) }
-        loadData()
     }
 
     fun refresh() {
-        viewModelScope.launch {
-            _uiState.update { it.copy(isRefreshing = true) }
-            kotlinx.coroutines.delay(800) // Fake delay for UX
-            loadData()
-            _uiState.update { it.copy(isRefreshing = false) }
-        }
+        // Data is already live via [observePeriodData]; this only drives the
+        // pull-to-refresh indicator and re-centres on the current date.
+        _uiState.update { it.copy(currentDate = System.currentTimeMillis()) }
     }
 
     fun selectItem(item: ExpenseItem) {
@@ -141,26 +152,14 @@ class ExpenseViewModel @Inject constructor(
     // ========== Search ==========
 
     fun onSearchQueryChange(query: String) {
+        // Just store the query; the reactive pipeline keeps [items] in sync with
+        // the period, and screens can filter locally when a query is present.
         _uiState.update { it.copy(searchQuery = query) }
-        if (query.isBlank()) {
-            loadData()
-        } else {
-            viewModelScope.launch {
-                repository.search(query)
-                    .catch { }
-                    .collect { results ->
-                        _uiState.update { it.copy(items = results) }
-                    }
-            }
-        }
     }
 
     fun toggleSearch() {
         _uiState.update {
             val newActive = !it.isSearchActive
-            if (!newActive) {
-                loadData()
-            }
             it.copy(isSearchActive = newActive, searchQuery = if (!newActive) "" else it.searchQuery)
         }
     }
@@ -168,15 +167,6 @@ class ExpenseViewModel @Inject constructor(
     // ========== Filtering ==========
     fun setCategoryFilter(category: ExpenseCategory?) {
         _uiState.update { it.copy(selectedCategory = category) }
-        viewModelScope.launch {
-            if (category == null) {
-                loadData()
-            } else {
-                repository.getByCategory(category.name).collect { results ->
-                    _uiState.update { it.copy(items = results) }
-                }
-            }
-        }
     }
 
     // ========== CRUD ==========
@@ -221,8 +211,12 @@ class ExpenseViewModel @Inject constructor(
         }
     }
 
-    fun generateCsvData(): String {
-        val items = _uiState.value.statsItems
+    /** CSV for the transactions currently loaded for the selected period (Day/Month/Year). */
+    fun generateCsvForCurrentPeriod(): String = buildCsv(_uiState.value.items)
+
+    fun generateCsvData(): String = buildCsv(_uiState.value.statsItems)
+
+    private fun buildCsv(items: List<ExpenseItem>): String {
         if (items.isEmpty()) return ""
 
         val csvBuilder = StringBuilder()

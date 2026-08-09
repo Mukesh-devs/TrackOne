@@ -3,35 +3,30 @@ package com.dev.trackone.feature.expense.presentation.screen
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccountBalance
-import androidx.compose.material.icons.filled.ArrowDownward
-import androidx.compose.material.icons.filled.ArrowUpward
-import androidx.compose.material.icons.filled.CalendarMonth
-import androidx.compose.material.icons.filled.Clear
-import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material.icons.filled.Download
-import androidx.compose.material.icons.filled.Money
-import androidx.compose.material.icons.filled.Payment
-import androidx.compose.material.icons.filled.PhoneAndroid
-import androidx.compose.material.icons.filled.Receipt
+import androidx.compose.material.icons.filled.Insights
+import androidx.compose.material.icons.filled.PieChart
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -43,359 +38,266 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import com.dev.trackone.core.common.util.CurrencyUtils
-import com.dev.trackone.core.common.util.DateUtils
-import com.dev.trackone.core.ui.component.TrackOneCard
-import com.dev.trackone.core.ui.component.TrackOneDatePicker
-import com.dev.trackone.core.ui.theme.Dimens
-import com.dev.trackone.feature.expense.domain.model.PaymentMode
+import com.dev.trackone.feature.expense.domain.model.ExpenseCategory
 import com.dev.trackone.feature.expense.presentation.ExpenseUiState
 import com.dev.trackone.feature.expense.presentation.TimePeriod
-import java.io.OutputStreamWriter
+
+private data class Slice(val label: String, val amount: Double, val fraction: Float, val color: Color)
 
 @Composable
 fun ExpenseStatsScreen(
     uiState: ExpenseUiState,
     dateLabel: String,
-    onDateRangeSelected: (start: Long?, end: Long?) -> Unit,
     onPeriodChange: (TimePeriod) -> Unit,
     onNavigateDate: (Boolean) -> Unit,
     getCsvData: () -> String,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
-    var showStartDatePicker by remember { mutableStateOf(false) }
-    var showEndDatePicker by remember { mutableStateOf(false) }
+    var showInsights by remember { mutableStateOf(false) }
 
-    val createDocumentLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.CreateDocument("text/csv")
+    val csvLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("text/csv"),
     ) { uri ->
         if (uri != null) {
-            try {
-                val csvContent = getCsvData()
-                context.contentResolver.openOutputStream(uri)?.use { outputStream ->
-                    OutputStreamWriter(outputStream).use { writer ->
-                        writer.write(csvContent)
-                    }
+            val data = getCsvData()
+            if (data.isBlank()) {
+                Toast.makeText(context, "No transactions to export", Toast.LENGTH_SHORT).show()
+            } else {
+                runCatching {
+                    context.contentResolver.openOutputStream(uri)?.use { it.write(data.toByteArray()) }
+                }.onSuccess {
+                    Toast.makeText(context, "Exported successfully", Toast.LENGTH_SHORT).show()
+                }.onFailure {
+                    Toast.makeText(context, "Export failed", Toast.LENGTH_SHORT).show()
                 }
-                Toast.makeText(context, "Exported successfully", Toast.LENGTH_SHORT).show()
-            } catch (e: Exception) {
-                Toast.makeText(context, "Export failed: ${e.message}", Toast.LENGTH_SHORT).show()
             }
         }
     }
+
+    val slices = remember(uiState.expenseItems) { buildSlices(uiState) }
+    val totalExpense = uiState.totalExpense
 
     Column(
         modifier = modifier
             .fillMaxSize()
-            .padding(
-                start = Dimens.SpacingLg,
-                end = Dimens.SpacingLg,
-                top = Dimens.SpacingMd,
-                bottom = 90.dp // Accounts for global bottom navigation bar
-            ),
-        horizontalAlignment = Alignment.CenterHorizontally
+            .background(MaterialTheme.colorScheme.background),
     ) {
-        
-        // Compact Credit | Debit Bar with Download Icon inside (Using Stats Data)
-        TrackOneCard(modifier = Modifier.fillMaxWidth()) {
-            Box(modifier = Modifier.fillMaxWidth()) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = Dimens.SpacingSm),
-                    horizontalArrangement = Arrangement.SpaceEvenly,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    // Credit (Income)
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector = Icons.Default.ArrowUpward,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.tertiary,
-                                modifier = Modifier.size(Dimens.IconSizeSm)
-                            )
-                            Spacer(modifier = Modifier.width(Dimens.SpacingXs))
-                            Text(
-                                text = "Credit",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        Text(
-                            text = CurrencyUtils.formatAmount(uiState.statsTotalIncome),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.tertiary
-                        )
-                    }
-    
-                    Box(
-                        modifier = Modifier
-                            .height(40.dp)
-                            .width(1.dp)
-                            .background(MaterialTheme.colorScheme.outlineVariant)
-                    )
-    
-                    // Debit (Expense)
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector = Icons.Default.ArrowDownward,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.error,
-                                modifier = Modifier.size(Dimens.IconSizeSm)
-                            )
-                            Spacer(modifier = Modifier.width(Dimens.SpacingXs))
-                            Text(
-                                text = "Debit",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        Text(
-                            text = CurrencyUtils.formatAmount(uiState.statsTotalExpense),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.error
-                        )
-                    }
-                }
-
-                IconButton(
-                    onClick = { 
-                        if (uiState.statsItems.isEmpty()) {
-                            Toast.makeText(context, "No transactions to export", Toast.LENGTH_SHORT).show()
-                        } else {
-                            val dl = DateUtils.formatDateShort(System.currentTimeMillis()).replace("/", "")
-                            createDocumentLauncher.launch("TrackOne_Export_$dl.csv")
-                        }
-                    },
-                    modifier = Modifier.align(Alignment.TopEnd)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Download,
-                        contentDescription = "Export CSV",
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(Dimens.SpacingMd))
-
-        // Single Bar for Date Range Picker
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(12.dp),
-            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+        // Header
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .statusBarsPadding()
+                .padding(start = 20.dp, end = 12.dp, top = 12.dp, bottom = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = Dimens.SpacingMd, vertical = Dimens.SpacingSm),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+            Text(
+                text = "Statistics",
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onBackground,
+                modifier = Modifier.weight(1f),
+            )
+            Surface(
+                onClick = { showInsights = true },
+                shape = RoundedCornerShape(20.dp),
+                color = MaterialTheme.colorScheme.primaryContainer,
             ) {
-                // From Date
                 Row(
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .clickable { showStartDatePicker = true }
-                        .padding(Dimens.SpacingXs)
                 ) {
                     Icon(
-                        imageVector = Icons.Default.CalendarMonth,
+                        imageVector = Icons.Default.Insights,
                         contentDescription = null,
-                        modifier = Modifier.size(16.dp),
-                        tint = MaterialTheme.colorScheme.primary
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                        modifier = Modifier.size(18.dp),
                     )
-                    Spacer(modifier = Modifier.width(Dimens.SpacingXs))
-                    Column {
-                        Text("From", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text(
-                            text = uiState.statsStartDate?.let { DateUtils.formatDateShort(it) } ?: "Select",
-                            style = MaterialTheme.typography.bodySmall,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    }
-                }
-
-                Box(
-                    modifier = Modifier
-                        .height(24.dp)
-                        .width(1.dp)
-                        .background(MaterialTheme.colorScheme.outlineVariant)
-                )
-
-                // To Date
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .clickable { showEndDatePicker = true }
-                        .padding(Dimens.SpacingXs)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.CalendarMonth,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp),
-                        tint = MaterialTheme.colorScheme.primary
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "Insights",
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
                     )
-                    Spacer(modifier = Modifier.width(Dimens.SpacingXs))
-                    Column {
-                        Text("To", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text(
-                            text = uiState.statsEndDate?.let { DateUtils.formatDateShort(it) } ?: "Select",
-                            style = MaterialTheme.typography.bodySmall,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    }
-                }
-
-                if (uiState.statsStartDate != null || uiState.statsEndDate != null) {
-                    IconButton(
-                        onClick = { onDateRangeSelected(null, null) },
-                        modifier = Modifier.size(24.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Clear,
-                            contentDescription = "Clear",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(16.dp)
-                        )
-                    }
                 }
             }
         }
 
-        Spacer(modifier = Modifier.height(Dimens.SpacingLg))
-
-        // Insights Section
-        Text(
-            text = "Insights",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.align(Alignment.Start)
-        )
-        Spacer(modifier = Modifier.height(Dimens.SpacingSm))
-
-        SharedTimePeriodToggle(
-            selectedPeriod = uiState.selectedPeriod,
-            onPeriodSelected = onPeriodChange
-        )
-        
-        SharedDateNavigationRow(
-            dateLabel = dateLabel,
-            onPrevious = { onNavigateDate(false) },
-            onNext = { onNavigateDate(true) }
-        )
-
-        Spacer(modifier = Modifier.height(Dimens.SpacingSm))
-
-        // Calculate expenses by mode based on uiState.items
-        val expenses = uiState.items.filter { !it.isIncome }
-        val creditCardExp = expenses.filter { it.paymentMode == PaymentMode.CREDIT_CARD }.sumOf { it.amount }
-        val debitCardExp = expenses.filter { it.paymentMode == PaymentMode.DEBIT_CARD }.sumOf { it.amount }
-        val upiExp = expenses.filter { it.paymentMode == PaymentMode.UPI }.sumOf { it.amount }
-        val cashExp = expenses.filter { it.paymentMode == PaymentMode.CASH }.sumOf { it.amount }
-        val netBankExp = expenses.filter { it.paymentMode == PaymentMode.NET_BANKING }.sumOf { it.amount }
-        val otherExp = expenses.filter { it.paymentMode == PaymentMode.OTHERS }.sumOf { it.amount }
-
-        // Layout the 8 items in a compact grid (4 rows x 2 cols)
-        Column(
-            modifier = Modifier.fillMaxWidth().weight(1f),
-            verticalArrangement = Arrangement.spacedBy(Dimens.SpacingSm)
+        LazyColumn(
+            contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 140.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            Row(modifier = Modifier.fillMaxWidth().weight(1f), horizontalArrangement = Arrangement.spacedBy(Dimens.SpacingSm)) {
-                CompactStatBox("Total Credits", uiState.totalIncome, Icons.Default.ArrowUpward, MaterialTheme.colorScheme.tertiary, Modifier.weight(1f))
-                CompactStatBox("Total Expense", uiState.totalExpense, Icons.Default.ArrowDownward, MaterialTheme.colorScheme.error, Modifier.weight(1f))
+            item {
+                SharedTimePeriodToggle(selectedPeriod = uiState.selectedPeriod, onPeriodSelected = onPeriodChange)
             }
-            Row(modifier = Modifier.fillMaxWidth().weight(1f), horizontalArrangement = Arrangement.spacedBy(Dimens.SpacingSm)) {
-                CompactStatBox("Credit Card", creditCardExp, Icons.Default.CreditCard, MaterialTheme.colorScheme.secondary, Modifier.weight(1f))
-                CompactStatBox("Debit Card", debitCardExp, Icons.Default.Payment, MaterialTheme.colorScheme.secondary, Modifier.weight(1f))
+            item {
+                Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surface, tonalElevation = 1.dp) {
+                    SharedDateNavigationRow(
+                        dateLabel = dateLabel,
+                        onPrevious = { onNavigateDate(false) },
+                        onNext = { onNavigateDate(true) },
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                    )
+                }
             }
-            Row(modifier = Modifier.fillMaxWidth().weight(1f), horizontalArrangement = Arrangement.spacedBy(Dimens.SpacingSm)) {
-                CompactStatBox("UPI", upiExp, Icons.Default.PhoneAndroid, MaterialTheme.colorScheme.secondary, Modifier.weight(1f))
-                CompactStatBox("Cash", cashExp, Icons.Default.Money, MaterialTheme.colorScheme.secondary, Modifier.weight(1f))
+
+            item {
+                Surface(
+                    onClick = { csvLauncher.launch("transactions_${dateLabel.replace(" ", "_")}.csv") },
+                    shape = RoundedCornerShape(16.dp),
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Row(
+                        modifier = Modifier.padding(vertical = 14.dp),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(Icons.Default.Download, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(20.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Download CSV", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimary)
+                    }
+                }
             }
-            Row(modifier = Modifier.fillMaxWidth().weight(1f), horizontalArrangement = Arrangement.spacedBy(Dimens.SpacingSm)) {
-                CompactStatBox("Net Banking", netBankExp, Icons.Default.AccountBalance, MaterialTheme.colorScheme.secondary, Modifier.weight(1f))
-                CompactStatBox("Other", otherExp, Icons.Default.Receipt, MaterialTheme.colorScheme.secondary, Modifier.weight(1f))
+
+            item {
+                if (slices.isEmpty()) {
+                    Surface(shape = RoundedCornerShape(20.dp), color = MaterialTheme.colorScheme.surface, tonalElevation = 1.dp, modifier = Modifier.fillMaxWidth()) {
+                        Column(
+                            modifier = Modifier.padding(32.dp).fillMaxWidth(),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                        ) {
+                            Icon(Icons.Default.PieChart, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f), modifier = Modifier.size(48.dp))
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Text("No spending in this period", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                } else {
+                    PieChartCard(slices = slices, total = totalExpense)
+                }
             }
         }
     }
 
-    if (showStartDatePicker) {
-        TrackOneDatePicker(
-            initialDate = uiState.statsStartDate ?: System.currentTimeMillis(),
-            title = "Select From Date",
-            onDateSelected = { 
-                showStartDatePicker = false
-                if (it != null) onDateRangeSelected(it, uiState.statsEndDate)
-            },
-            onDismiss = { showStartDatePicker = false }
-        )
+    if (showInsights) {
+        InsightsDialog(uiState = uiState, onDismiss = { showInsights = false })
     }
+}
 
-    if (showEndDatePicker) {
-        TrackOneDatePicker(
-            initialDate = uiState.statsEndDate ?: System.currentTimeMillis(),
-            title = "Select To Date",
-            onDateSelected = { 
-                showEndDatePicker = false
-                if (it != null) onDateRangeSelected(uiState.statsStartDate, it)
-            },
-            onDismiss = { showEndDatePicker = false }
-        )
+// ── Pie chart ─────────────────────────────────────────────────────────────────
+
+@Composable
+private fun PieChartCard(slices: List<Slice>, total: Double) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        color = MaterialTheme.colorScheme.surface,
+        shadowElevation = 1.dp,
+        tonalElevation = 1.dp,
+    ) {
+        Column(modifier = Modifier.padding(20.dp)) {
+            Text(
+                text = "Spending by Category",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                Canvas(modifier = Modifier.size(180.dp)) {
+                    var start = -90f
+                    slices.forEach { s ->
+                        val sweep = s.fraction * 360f
+                        drawArc(color = s.color, startAngle = start, sweepAngle = sweep, useCenter = true)
+                        start += sweep
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+            slices.forEach { s ->
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Box(modifier = Modifier.size(12.dp).clip(CircleShape).background(s.color))
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Text(s.label, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
+                    Text("${(s.fraction * 100).toInt()}%", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(end = 10.dp))
+                    Text(CurrencyUtils.formatAmount(s.amount), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
+                }
+            }
+        }
+    }
+}
+
+// ── Insights popup (moved from the old total cards) ───────────────────────────
+
+@Composable
+private fun InsightsDialog(uiState: ExpenseUiState, onDismiss: () -> Unit) {
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(shape = RoundedCornerShape(24.dp), color = MaterialTheme.colorScheme.surface) {
+            Column(modifier = Modifier.padding(20.dp)) {
+                Text("Insights", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                Spacer(modifier = Modifier.height(16.dp))
+                InsightRow("Total Income", uiState.totalIncome, Color(0xFF2E7D32))
+                Spacer(modifier = Modifier.height(12.dp))
+                InsightRow("Total Expense", uiState.totalExpense, MaterialTheme.colorScheme.error)
+                Spacer(modifier = Modifier.height(12.dp))
+                InsightRow("Balance", uiState.balance, MaterialTheme.colorScheme.primary)
+            }
+        }
     }
 }
 
 @Composable
-private fun CompactStatBox(
-    title: String,
-    amount: Double,
-    icon: ImageVector,
-    color: androidx.compose.ui.graphics.Color,
-    modifier: Modifier = Modifier
-) {
-    Surface(
-        modifier = modifier.fillMaxHeight(),
-        shape = RoundedCornerShape(12.dp),
-        color = color.copy(alpha = 0.1f)
-    ) {
-        Column(
-            modifier = Modifier.padding(Dimens.SpacingSm),
-            horizontalAlignment = Alignment.Start,
-            verticalArrangement = Arrangement.Center
+private fun InsightRow(label: String, amount: Double, accent: Color) {
+    Surface(shape = RoundedCornerShape(16.dp), color = accent.copy(alpha = 0.10f), modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = color,
-                    modifier = Modifier.size(14.dp)
-                )
-                Spacer(modifier = Modifier.width(Dimens.SpacingXs))
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            Spacer(modifier = Modifier.height(2.dp))
-            Text(
-                text = CurrencyUtils.formatAmount(amount),
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Bold,
-                color = color
-            )
+            Text(label, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
+            Text(CurrencyUtils.formatAmount(amount), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = accent)
         }
     }
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+private fun buildSlices(uiState: ExpenseUiState): List<Slice> {
+    val byCat = uiState.expenseItems
+        .groupBy { it.category }
+        .mapValues { entry -> entry.value.sumOf { it.amount } }
+        .filter { it.value > 0.0 }
+    val total = byCat.values.sum()
+    if (total <= 0.0) return emptyList()
+    return byCat.entries
+        .sortedByDescending { it.value }
+        .map { Slice(it.key.displayName, it.value, (it.value / total).toFloat(), categoryColor(it.key)) }
+}
+
+private fun categoryColor(c: ExpenseCategory): Color = when (c) {
+    ExpenseCategory.FOOD -> Color(0xFFFFB300)
+    ExpenseCategory.TRANSPORTATION -> Color(0xFF1E88E5)
+    ExpenseCategory.HOUSING -> Color(0xFF43A047)
+    ExpenseCategory.UTILITIES -> Color(0xFF8E24AA)
+    ExpenseCategory.HEALTHCARE -> Color(0xFFE53935)
+    ExpenseCategory.SHOPPING -> Color(0xFF00ACC1)
+    ExpenseCategory.ENTERTAINMENT -> Color(0xFFE91E63)
+    ExpenseCategory.EDUCATION -> Color(0xFF3949AB)
+    ExpenseCategory.TRAVEL -> Color(0xFF00897B)
+    ExpenseCategory.PERSONAL -> Color(0xFF6D4C41)
+    ExpenseCategory.INSURANCE -> Color(0xFF546E7A)
+    ExpenseCategory.SAVINGS -> Color(0xFF00695C)
+    else -> Color(0xFF9E9E9E)
 }
