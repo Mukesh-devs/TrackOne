@@ -28,8 +28,8 @@ class ExpiryViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(ExpiryUiState())
     val uiState: StateFlow<ExpiryUiState> = _uiState.asStateFlow()
 
-    private val _dismissedGroups = MutableStateFlow<Set<String>>(
-        prefs.getStringSet("dismissed_groups", emptySet()) ?: emptySet()
+    private val _trashedIds = MutableStateFlow<Set<Long>>(
+        prefs.getStringSet("trashed_ids", emptySet())?.mapNotNull { it.toLongOrNull() }?.toSet() ?: emptySet()
     )
 
     private val _formState = MutableStateFlow(ExpiryFormState())
@@ -45,28 +45,16 @@ class ExpiryViewModel @Inject constructor(
                 repository.getAll(),
                 repository.getExpired(),
                 repository.getAllProviders(),
-                _dismissedGroups,
-            ) { all, expired, providers, dismissed ->
-                val groups = all.groupBy { it.provider }
-                    .map { (provider, items) -> ExpiryGroup(name = provider, items = items) }
-                    .filter { group ->
-                        val hasActive = group.nearestExpiry != null
-                        if (hasActive) true else group.name !in dismissed
-                    }
-                    .sortedBy { group -> group.items.minOf { it.expiryDate } }
-
+                _trashedIds,
+            ) { all, expired, providers, trashed ->
                 _uiState.update { state ->
-                    val updatedSelectedGroup = state.selectedGroup?.let { currentSelected ->
-                        groups.find { it.name == currentSelected.name }
-                    }
                     state.copy(
                         isLoading = false,
                         allItems = all,
-                        groups = groups,
                         expiredItems = expired,
                         providers = providers,
+                        trashedIds = trashed,
                         error = null,
-                        selectedGroup = updatedSelectedGroup
                     )
                 }
             }
@@ -126,11 +114,25 @@ class ExpiryViewModel @Inject constructor(
 
     // ========== CRUD ==========
 
-    fun dismissGroupFromHome(groupName: String) {
-        _dismissedGroups.update { current ->
-            val newSet = current + groupName
-            prefs.edit().putStringSet("dismissed_groups", newSet).apply()
-            newSet
+    private fun persistTrashed(ids: Set<Long>) {
+        prefs.edit().putStringSet("trashed_ids", ids.map { it.toString() }.toSet()).apply()
+    }
+
+    /** Move an item to trash (soft-delete). It leaves Home and appears in the Expired tab. */
+    fun trashItem(item: ExpiryItem) {
+        _trashedIds.update { current -> (current + item.id).also { persistTrashed(it) } }
+    }
+
+    /** Restore a trashed item back to Home. */
+    fun restoreItem(item: ExpiryItem) {
+        _trashedIds.update { current -> (current - item.id).also { persistTrashed(it) } }
+    }
+
+    /** Permanently delete a trashed item from the database. */
+    fun deleteForever(item: ExpiryItem) {
+        viewModelScope.launch {
+            repository.delete(item)
+            _trashedIds.update { current -> (current - item.id).also { persistTrashed(it) } }
         }
     }
 

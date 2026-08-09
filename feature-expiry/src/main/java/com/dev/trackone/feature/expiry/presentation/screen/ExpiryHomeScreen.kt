@@ -81,7 +81,7 @@ private const val SOON_THRESHOLD_DAYS = 30L
 fun ExpiryHomeScreen(
     uiState: ExpiryUiState,
     onItemClick: (ExpiryItem) -> Unit,
-    onDeleteItem: (ExpiryItem) -> Unit,
+    onTrashItem: (ExpiryItem) -> Unit,
     onSearchQueryChange: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -89,8 +89,11 @@ fun ExpiryHomeScreen(
     var filter by remember { mutableStateOf(ExpiryFilter.ALL) }
     val query = uiState.searchQuery.trim()
 
-    val searched = remember(uiState.allItems, query) {
-        uiState.allItems.filter { query.isBlank() || it.matchesQuery(query) }
+    // Trashed items are hidden from Home (they live in the Expired tab).
+    val searched = remember(uiState.allItems, uiState.trashedIds, query) {
+        uiState.allItems
+            .filterNot { it.id in uiState.trashedIds }
+            .filter { query.isBlank() || it.matchesQuery(query) }
     }
 
     val allCount = searched.size
@@ -159,7 +162,7 @@ fun ExpiryHomeScreen(
                 }
                 items(items = visible, key = { it.id }) { item ->
                     if (item.expiryDate < now) {
-                        SwipeToTrash(onDelete = { onDeleteItem(item) }) {
+                        SwipeToTrash(onDelete = { onTrashItem(item) }) {
                             ExpiryItemCard(item = item, now = now, onClick = { onItemClick(item) })
                         }
                     } else {

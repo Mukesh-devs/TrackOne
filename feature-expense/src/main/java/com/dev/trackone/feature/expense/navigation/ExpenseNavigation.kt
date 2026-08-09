@@ -33,7 +33,6 @@ import com.dev.trackone.core.ui.component.TrackOneTopBar
 import com.dev.trackone.feature.expense.presentation.ExpenseViewModel
 import com.dev.trackone.feature.expense.presentation.screen.ExpenseAddScreen
 import com.dev.trackone.feature.expense.presentation.screen.ExpenseHomeScreen
-import kotlinx.coroutines.launch
 
 object ExpenseRoutes {
     const val MAIN_PAGER = "expense_main_pager"
@@ -63,14 +62,13 @@ fun ExpenseNavigation(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val formState by viewModel.formState.collectAsStateWithLifecycle()
 
-    val coroutineScope = androidx.compose.runtime.rememberCoroutineScope()
-    val pagerState = androidx.compose.foundation.pager.rememberPagerState(pageCount = { expenseBottomNavItems.size })
+    var currentTab by remember { mutableStateOf(ExpenseRoutes.HOME) }
 
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentNavRoute = navBackStackEntry?.destination?.route
-    
+
     val currentRoute = if (currentNavRoute == ExpenseRoutes.MAIN_PAGER || currentNavRoute == null) {
-        expenseBottomNavItems[pagerState.currentPage].route
+        currentTab
     } else {
         currentNavRoute
     }
@@ -164,11 +162,7 @@ fun ExpenseNavigation(
                 },
             ) {
                 composable(ExpenseRoutes.MAIN_PAGER) {
-                    androidx.compose.foundation.pager.HorizontalPager(
-                        state = pagerState,
-                        modifier = Modifier.fillMaxSize()
-                    ) { page ->
-                        when (expenseBottomNavItems[page].route) {
+                    when (currentTab) {
                             ExpenseRoutes.HOME -> {
                                 ExpenseHomeScreen(
                                     uiState = uiState,
@@ -204,7 +198,7 @@ fun ExpenseNavigation(
                                     onSave = viewModel::saveForm,
                                     onSaveSuccess = {
                                         viewModel.resetSaveSuccess()
-                                        coroutineScope.launch { pagerState.animateScrollToPage(0) }
+                                        currentTab = ExpenseRoutes.HOME
                                     },
                                 )
                             }
@@ -225,8 +219,8 @@ fun ExpenseNavigation(
                                     subtitle = "Expense module settings coming soon",
                                 )
                             }
+                            else -> Unit
                         }
-                    }
                 }
 
                 composable(ExpenseRoutes.TRANSACTIONS) {
@@ -303,13 +297,10 @@ fun ExpenseNavigation(
                         items = expenseBottomNavItems,
                         selectedRoute = currentRoute,
                         onItemSelected = { item ->
-                            val index = expenseBottomNavItems.indexOfFirst { it.route == item.route }
-                            if (index >= 0) {
-                                if (item.route == ExpenseRoutes.ADD) {
-                                    viewModel.initAddForm()
-                                }
-                                coroutineScope.launch { pagerState.animateScrollToPage(index) }
+                            if (item.route == ExpenseRoutes.ADD) {
+                                viewModel.initAddForm()
                             }
+                            currentTab = item.route
                         },
                     )
                 }

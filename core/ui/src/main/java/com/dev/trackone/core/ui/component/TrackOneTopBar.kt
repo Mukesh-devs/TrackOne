@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.ui.Alignment
@@ -59,8 +60,9 @@ fun TrackOneTopBar(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .height(48.dp)
             .background(resolvedColors.containerColor)
+            .statusBarsPadding()
+            .height(48.dp)
             .padding(horizontal = 4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {

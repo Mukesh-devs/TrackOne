@@ -20,6 +20,8 @@ data class ExpiryUiState(
     val selectedProvider: String? = null,
     val showActiveOnly: Boolean = false,
     val showExpiredOnly: Boolean = false,
+    /** IDs of items the user swiped to trash (soft-deleted; shown in the Expired tab). */
+    val trashedIds: Set<Long> = emptySet(),
     val error: String? = null,
 )
 

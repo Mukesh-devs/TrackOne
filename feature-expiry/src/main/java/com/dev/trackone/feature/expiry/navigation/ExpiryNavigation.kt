@@ -17,17 +17,12 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Category
-import androidx.compose.material.icons.filled.GridView
+import androidx.compose.material.icons.filled.EventBusy
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.MoreHoriz
-import androidx.compose.material.icons.filled.PieChart
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -35,6 +30,9 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -47,22 +45,18 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.dev.trackone.core.ui.component.TrackOneEmptyState
-import com.dev.trackone.core.ui.component.TrackOneFAB
 import com.dev.trackone.feature.expiry.presentation.ExpiryViewModel
 import com.dev.trackone.feature.expiry.presentation.screen.ExpiryAddScreen
 import com.dev.trackone.feature.expiry.presentation.screen.ExpiryDetailScreen
+import com.dev.trackone.feature.expiry.presentation.screen.ExpiryExpiredScreen
 import com.dev.trackone.feature.expiry.presentation.screen.ExpiryHomeScreen
-import kotlinx.coroutines.launch
 
 /** Route constants for Expiry module internal navigation. */
 object ExpiryRoutes {
     const val MAIN = "expiry_main"
     const val HOME = "expiry_home"
     const val ADD = "expiry_add"
-    const val CATEGORIES = "expiry_categories"
-    const val STATS = "expiry_stats"
-    const val MORE = "expiry_more"
+    const val EXPIRED = "expiry_expired"
     const val DETAIL = "expiry_detail"
     const val EDIT = "expiry_edit"
 }
@@ -71,16 +65,14 @@ private data class ExpiryTab(val label: String, val icon: ImageVector, val route
 
 private val expiryTabs = listOf(
     ExpiryTab("Home", Icons.Filled.Home, ExpiryRoutes.HOME),
-    ExpiryTab("Add Item", Icons.Filled.Add, ExpiryRoutes.ADD),
-    ExpiryTab("Categories", Icons.Filled.GridView, ExpiryRoutes.CATEGORIES),
-    ExpiryTab("Stats", Icons.Filled.PieChart, ExpiryRoutes.STATS),
-    ExpiryTab("More", Icons.Filled.MoreHoriz, ExpiryRoutes.MORE),
+    ExpiryTab("Add", Icons.Filled.Add, ExpiryRoutes.ADD),
+    ExpiryTab("Expired", Icons.Filled.EventBusy, ExpiryRoutes.EXPIRED),
 )
 
 /**
- * Root of the Expiry module. Fully self-contained: it renders its own header
- * (inside each screen), a floating bottom navigation bar, and a FAB — none of
- * the app-level chrome (drawer / cloud / shared top bar) appears here.
+ * Root of the Expiry module. Fully self-contained (own header + floating bottom
+ * nav). Sections switch purely by the bottom nav — only the selected section is
+ * composed, so there's no swipe gesture and no page fly-through.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -92,9 +84,7 @@ fun ExpiryNavigation(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val formState by viewModel.formState.collectAsStateWithLifecycle()
 
-    val coroutineScope = androidx.compose.runtime.rememberCoroutineScope()
-    val pagerState = rememberPagerState(pageCount = { expiryTabs.size })
-    val currentRoute = expiryTabs[pagerState.currentPage].route
+    var currentRoute by remember { mutableStateOf(ExpiryRoutes.HOME) }
 
     Surface(
         modifier = modifier.fillMaxSize(),
@@ -108,83 +98,55 @@ fun ExpiryNavigation(
         ) {
             composable(ExpiryRoutes.MAIN) {
                 Box(modifier = Modifier.fillMaxSize()) {
-                    HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize()) { page ->
-                        when (expiryTabs[page].route) {
-                            ExpiryRoutes.HOME -> ExpiryHomeScreen(
-                                uiState = uiState,
-                                onItemClick = { item ->
-                                    viewModel.selectItem(item)
-                                    navController.navigate(ExpiryRoutes.DETAIL)
+                    // Only the selected section renders — no pager, no swipe.
+                    when (currentRoute) {
+                        ExpiryRoutes.HOME -> ExpiryHomeScreen(
+                            uiState = uiState,
+                            onItemClick = { item ->
+                                viewModel.selectItem(item)
+                                navController.navigate(ExpiryRoutes.DETAIL)
+                            },
+                            onTrashItem = { viewModel.trashItem(it) },
+                            onSearchQueryChange = { viewModel.onSearchQueryChange(it) },
+                        )
+
+                        ExpiryRoutes.ADD -> Column(modifier = Modifier.fillMaxSize()) {
+                            ScreenTitle("Add Item")
+                            ExpiryAddScreen(
+                                formState = formState,
+                                onNameChange = viewModel::updateFormName,
+                                onProviderChange = viewModel::updateFormProvider,
+                                onLabelChange = viewModel::updateFormLabel,
+                                onPurchasedDateChange = viewModel::updateFormPurchasedDate,
+                                onExpiryDateChange = viewModel::updateFormExpiryDate,
+                                onNotesChange = viewModel::updateFormNotes,
+                                onAmountChange = viewModel::updateFormAmount,
+                                onUsernameChange = viewModel::updateFormUsername,
+                                onEmailChange = viewModel::updateFormEmail,
+                                onPasswordChange = viewModel::updateFormPassword,
+                                onSave = viewModel::saveForm,
+                                onSaveSuccess = {
+                                    viewModel.resetSaveSuccess()
+                                    currentRoute = ExpiryRoutes.HOME
                                 },
-                                onDeleteItem = { viewModel.deleteItem(it) },
-                                onSearchQueryChange = { viewModel.onSearchQueryChange(it) },
-                            )
-
-                            ExpiryRoutes.ADD -> Column(modifier = Modifier.fillMaxSize()) {
-                                ScreenTitle("Add Item")
-                                ExpiryAddScreen(
-                                    formState = formState,
-                                    onNameChange = viewModel::updateFormName,
-                                    onProviderChange = viewModel::updateFormProvider,
-                                    onLabelChange = viewModel::updateFormLabel,
-                                    onPurchasedDateChange = viewModel::updateFormPurchasedDate,
-                                    onExpiryDateChange = viewModel::updateFormExpiryDate,
-                                    onNotesChange = viewModel::updateFormNotes,
-                                    onAmountChange = viewModel::updateFormAmount,
-                                    onUsernameChange = viewModel::updateFormUsername,
-                                    onEmailChange = viewModel::updateFormEmail,
-                                    onPasswordChange = viewModel::updateFormPassword,
-                                    onSave = viewModel::saveForm,
-                                    onSaveSuccess = {
-                                        viewModel.resetSaveSuccess()
-                                        coroutineScope.launch { pagerState.animateScrollToPage(0) }
-                                    },
-                                )
-                            }
-
-                            ExpiryRoutes.CATEGORIES -> Placeholder(
-                                title = "Categories",
-                                icon = Icons.Filled.Category,
-                                subtitle = "Group your items by category — coming soon",
-                            )
-
-                            ExpiryRoutes.STATS -> Placeholder(
-                                title = "Stats",
-                                icon = Icons.Filled.PieChart,
-                                subtitle = "Insights on your spending and renewals — coming soon",
-                            )
-
-                            ExpiryRoutes.MORE -> Placeholder(
-                                title = "More",
-                                icon = Icons.Filled.MoreHoriz,
-                                subtitle = "Additional options — coming soon",
                             )
                         }
-                    }
 
-                    // FAB — only on Home
-                    if (currentRoute == ExpiryRoutes.HOME) {
-                        TrackOneFAB(
-                            onClick = {
-                                viewModel.initAddForm()
-                                coroutineScope.launch { pagerState.animateScrollToPage(1) }
-                            },
-                            contentDescription = "Add item",
-                            modifier = Modifier
-                                .align(Alignment.BottomEnd)
-                                .padding(end = 20.dp, bottom = 110.dp),
+                        ExpiryRoutes.EXPIRED -> ExpiryExpiredScreen(
+                            items = uiState.allItems.filter { it.id in uiState.trashedIds },
+                            onRestore = { viewModel.restoreItem(it) },
+                            onDeleteForever = { viewModel.deleteForever(it) },
                         )
+
+                        else -> Unit
                     }
 
                     ExpiryFloatingNav(
                         tabs = expiryTabs,
                         selectedRoute = currentRoute,
                         onSelect = { tab ->
-                            val index = expiryTabs.indexOfFirst { it.route == tab.route }
-                            if (index >= 0) {
-                                if (tab.route == ExpiryRoutes.ADD) viewModel.initAddForm()
-                                coroutineScope.launch { pagerState.animateScrollToPage(index) }
-                            }
+                            if (tab.route == ExpiryRoutes.ADD) viewModel.initAddForm()
+                            currentRoute = tab.route
                         },
                         modifier = Modifier.align(Alignment.BottomCenter),
                     )
@@ -261,7 +223,7 @@ private fun ExpiryFloatingNav(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 10.dp),
+                .padding(horizontal = 12.dp, vertical = 10.dp),
             horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -271,7 +233,7 @@ private fun ExpiryFloatingNav(
                     modifier = Modifier
                         .clip(RoundedCornerShape(16.dp))
                         .clickable { onSelect(tab) }
-                        .padding(horizontal = 6.dp, vertical = 4.dp),
+                        .padding(horizontal = 10.dp, vertical = 4.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     if (selected) {
@@ -313,26 +275,17 @@ private fun ExpiryFloatingNav(
     }
 }
 
-// ── Small helpers ─────────────────────────────────────────────────────────────
-
 @Composable
 private fun ScreenTitle(title: String) {
     Text(
         text = title,
-        style = MaterialTheme.typography.headlineSmall,
+        style = MaterialTheme.typography.titleLarge,
         fontWeight = FontWeight.Bold,
         color = MaterialTheme.colorScheme.onBackground,
+        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
         modifier = Modifier
             .fillMaxWidth()
             .statusBarsPadding()
-            .padding(start = 20.dp, end = 20.dp, top = 12.dp, bottom = 8.dp),
+            .padding(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 12.dp),
     )
-}
-
-@Composable
-private fun Placeholder(title: String, icon: ImageVector, subtitle: String) {
-    Column(modifier = Modifier.fillMaxSize()) {
-        ScreenTitle(title)
-        TrackOneEmptyState(icon = icon, title = title, subtitle = subtitle)
-    }
 }

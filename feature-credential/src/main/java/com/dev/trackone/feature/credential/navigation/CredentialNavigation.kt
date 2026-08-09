@@ -14,6 +14,9 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -35,7 +38,6 @@ import com.dev.trackone.feature.credential.presentation.screen.CredentialHomeScr
 import java.net.URLDecoder
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
-import kotlinx.coroutines.launch
 
 object CredentialRoutes {
     const val MAIN_PAGER = "credential_main_pager"
@@ -67,14 +69,13 @@ fun CredentialNavigation(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val formState by viewModel.formState.collectAsStateWithLifecycle()
 
-    val coroutineScope = androidx.compose.runtime.rememberCoroutineScope()
-    val pagerState = androidx.compose.foundation.pager.rememberPagerState(pageCount = { credentialBottomNavItems.size })
+    var currentTab by remember { mutableStateOf(CredentialRoutes.HOME) }
 
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentNavRoute = navBackStackEntry?.destination?.route
-    
+
     val currentRoute = if (currentNavRoute == CredentialRoutes.MAIN_PAGER || currentNavRoute == null) {
-        credentialBottomNavItems[pagerState.currentPage].route
+        currentTab
     } else {
         currentNavRoute
     }
@@ -127,11 +128,7 @@ fun CredentialNavigation(
                 exitTransition = { fadeOut(tween(200)) },
             ) {
                 composable(CredentialRoutes.MAIN_PAGER) {
-                    androidx.compose.foundation.pager.HorizontalPager(
-                        state = pagerState,
-                        modifier = Modifier.fillMaxSize()
-                    ) { page ->
-                        when (credentialBottomNavItems[page].route) {
+                    when (currentTab) {
                             CredentialRoutes.HOME -> {
                                 CredentialHomeScreen(
                                     uiState = uiState,
@@ -158,7 +155,7 @@ fun CredentialNavigation(
                                     onSave = viewModel::saveForm,
                                     onSaveSuccess = {
                                         viewModel.resetSaveSuccess()
-                                        coroutineScope.launch { pagerState.animateScrollToPage(0) }
+                                        currentTab = CredentialRoutes.HOME
                                     },
                                 )
                             }
@@ -168,10 +165,10 @@ fun CredentialNavigation(
                                     onExportCsv = { uri -> viewModel.exportCsv(uri, context) }
                                 )
                             }
+                            else -> Unit
                         }
-                    }
                 }
-                
+
                 composable(
                     route = CredentialRoutes.DETAILS,
                     arguments = listOf(navArgument("title") { type = NavType.StringType })
@@ -220,13 +217,10 @@ fun CredentialNavigation(
                     items = credentialBottomNavItems,
                     selectedRoute = currentRoute,
                     onItemSelected = { item ->
-                        val index = credentialBottomNavItems.indexOfFirst { it.route == item.route }
-                        if (index >= 0) {
-                            if (item.route == CredentialRoutes.ADD) {
-                                viewModel.initAddForm()
-                            }
-                            coroutineScope.launch { pagerState.animateScrollToPage(index) }
+                        if (item.route == CredentialRoutes.ADD) {
+                            viewModel.initAddForm()
                         }
+                        currentTab = item.route
                     },
                     modifier = Modifier.align(Alignment.BottomCenter),
                 )
