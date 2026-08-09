@@ -352,8 +352,8 @@ fun ExpiryItemCard(
         modifier = modifier.fillMaxWidth().height(IntrinsicSize.Min),
         shape = RoundedCornerShape(16.dp),
         color = MaterialTheme.colorScheme.surface,
-        shadowElevation = 1.dp,
-        tonalElevation = 1.dp,
+        shadowElevation = 3.dp,
+        tonalElevation = 2.dp,
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             // Red accent stripe for expired items

@@ -49,7 +49,9 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.dev.trackone.core.ui.component.FloatingNavItem
 import com.dev.trackone.core.ui.component.TrackOneEmptyState
+import com.dev.trackone.core.ui.component.TrackOneFloatingNav
 import com.dev.trackone.feature.expense.presentation.ExpenseViewModel
 import com.dev.trackone.feature.expense.presentation.screen.ExpenseAddScreen
 import com.dev.trackone.feature.expense.presentation.screen.ExpenseDetailScreen
@@ -87,7 +89,9 @@ fun ExpenseNavigation(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val formState by viewModel.formState.collectAsStateWithLifecycle()
-    val dateLabel = viewModel.getDateLabel()
+    // Reading the observed uiState fields here keeps the label reactive to
+    // period/date changes (getDateLabel() reading _uiState.value would be stale).
+    val dateLabel = viewModel.dateLabelFor(uiState.selectedPeriod, uiState.currentDate)
 
     var currentTab by remember { mutableStateOf(ExpenseRoutes.HOME) }
 
@@ -169,8 +173,11 @@ fun ExpenseNavigation(
                         else -> Unit
                     }
 
-                    ExpenseBottomNav(
-                        selected = currentTab,
+                    TrackOneFloatingNav(
+                        items = expenseTabs.map {
+                            FloatingNavItem(it.label, it.icon, it.route, emphasized = it.route == ExpenseRoutes.ADD)
+                        },
+                        selectedRoute = currentTab,
                         onSelect = { route ->
                             if (route == ExpenseRoutes.ADD) viewModel.initAddForm()
                             currentTab = route
@@ -219,75 +226,6 @@ fun ExpenseNavigation(
                             navController.popBackStack()
                         },
                     )
-                }
-            }
-        }
-    }
-}
-
-// ── Bottom nav (center Add emphasized) ────────────────────────────────────────
-
-@Composable
-private fun ExpenseBottomNav(
-    selected: String,
-    onSelect: (String) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Surface(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp)
-            .padding(bottom = 12.dp)
-            .navigationBarsPadding(),
-        shape = RoundedCornerShape(28.dp),
-        color = MaterialTheme.colorScheme.surface,
-        shadowElevation = 10.dp,
-        tonalElevation = 3.dp,
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            expenseTabs.forEach { tab ->
-                if (tab.route == ExpenseRoutes.ADD) {
-                    Box(
-                        modifier = Modifier
-                            .size(52.dp)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.primary)
-                            .clickable { onSelect(tab.route) },
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.Add,
-                            contentDescription = "Add transaction",
-                            tint = MaterialTheme.colorScheme.onPrimary,
-                            modifier = Modifier.size(28.dp),
-                        )
-                    }
-                } else {
-                    val isSelected = tab.route == selected
-                    Box(
-                        modifier = Modifier
-                            .size(48.dp)
-                            .clip(CircleShape)
-                            .background(
-                                if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)
-                                else androidx.compose.ui.graphics.Color.Transparent
-                            )
-                            .clickable { onSelect(tab.route) },
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Icon(
-                            imageVector = tab.icon,
-                            contentDescription = tab.label,
-                            tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(24.dp),
-                        )
-                    }
                 }
             }
         }

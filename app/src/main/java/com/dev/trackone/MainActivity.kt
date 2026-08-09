@@ -82,7 +82,9 @@ class MainActivity : FragmentActivity() {
                 }
             }
 
-            TrackOneTheme(themeMode = themeMode) {
+            // dynamicColor = false so our sky-blue palette applies on every device
+            // (Android 12+ would otherwise override it with wallpaper colors).
+            TrackOneTheme(themeMode = themeMode, dynamicColor = false) {
                 userPreferences?.let { prefs ->
                     if (!prefs.hasSeenOnboarding) {
                         OnboardingScreen(

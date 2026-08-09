@@ -34,6 +34,8 @@ import com.dev.trackone.feature.expense.domain.model.ExpenseCategory
 import com.dev.trackone.feature.expense.domain.model.ExpenseItem
 import com.dev.trackone.feature.expense.domain.model.PaymentMode
 import com.dev.trackone.feature.expense.presentation.TimePeriod
+import androidx.compose.material.icons.filled.ArrowDownward
+import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Receipt
 import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material.icons.filled.DirectionsCar
@@ -215,17 +217,27 @@ fun ExpenseListItem(
                 )
             }
             
-            // Amount & Payment Mode Icon
+            // Direction arrow + Amount + Payment Mode Icon
+            val amountColor = if (item.isIncome) Color(0xFF2E7D32) else Color(0xFFC5221F)
             Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = if (item.isIncome) Icons.Default.ArrowDownward else Icons.Default.ArrowUpward,
+                    contentDescription = if (item.isIncome) "Income" else "Expense",
+                    tint = amountColor,
+                    modifier = Modifier.size(16.dp)
+                )
+
+                Spacer(modifier = Modifier.width(4.dp))
+
                 Text(
                     text = CurrencyUtils.formatAmount(item.amount),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = if (item.isIncome) Color(0xFF2E7D32) else MaterialTheme.colorScheme.onBackground
                 )
-                
+
                 Spacer(modifier = Modifier.width(8.dp))
-                
+
                 Icon(
                     imageVector = payIcon,
                     contentDescription = item.paymentMode.displayName,

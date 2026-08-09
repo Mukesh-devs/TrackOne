@@ -240,8 +240,8 @@ private fun HeroCard(item: ExpiryItem, days: Long, expired: Boolean, accent: Col
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
         color = MaterialTheme.colorScheme.surface,
-        shadowElevation = 1.dp,
-        tonalElevation = 1.dp,
+        shadowElevation = 6.dp,
+        tonalElevation = 2.dp,
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
             Text(
@@ -358,8 +358,8 @@ private fun SectionCard(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
         color = MaterialTheme.colorScheme.surface,
-        shadowElevation = 1.dp,
-        tonalElevation = 1.dp,
+        shadowElevation = 6.dp,
+        tonalElevation = 2.dp,
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {

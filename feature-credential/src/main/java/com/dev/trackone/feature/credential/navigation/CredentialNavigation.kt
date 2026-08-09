@@ -29,7 +29,8 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.dev.trackone.core.ui.component.BottomNavItem
-import com.dev.trackone.core.ui.component.TrackOneBottomBar
+import com.dev.trackone.core.ui.component.FloatingNavItem
+import com.dev.trackone.core.ui.component.TrackOneFloatingNav
 import com.dev.trackone.core.ui.component.TrackOneTopBar
 import com.dev.trackone.feature.credential.presentation.CredentialViewModel
 import com.dev.trackone.feature.credential.presentation.screen.CredentialAddScreen
@@ -211,16 +212,16 @@ fun CredentialNavigation(
                 }
             }
 
-            // Floating bottom bar overlay — transparent behind the pill
+            // Floating bottom nav (shared, icon-only, center Add emphasized)
             if (isOnMainScreen) {
-                TrackOneBottomBar(
-                    items = credentialBottomNavItems,
+                TrackOneFloatingNav(
+                    items = credentialBottomNavItems.map {
+                        FloatingNavItem(it.label, it.icon, it.route, emphasized = it.route == CredentialRoutes.ADD)
+                    },
                     selectedRoute = currentRoute,
-                    onItemSelected = { item ->
-                        if (item.route == CredentialRoutes.ADD) {
-                            viewModel.initAddForm()
-                        }
-                        currentTab = item.route
+                    onSelect = { route ->
+                        if (route == CredentialRoutes.ADD) viewModel.initAddForm()
+                        currentTab = route
                     },
                     modifier = Modifier.align(Alignment.BottomCenter),
                 )

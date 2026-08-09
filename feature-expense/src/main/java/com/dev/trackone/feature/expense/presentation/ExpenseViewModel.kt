@@ -142,11 +142,14 @@ class ExpenseViewModel @Inject constructor(
 
     fun getDateLabel(): String {
         val state = _uiState.value
-        return when (state.selectedPeriod) {
-            TimePeriod.DAY -> DateUtils.formatDate(state.currentDate)
-            TimePeriod.MONTH -> DateUtils.formatMonthYear(state.currentDate)
-            TimePeriod.YEAR -> DateUtils.formatDate(state.currentDate, "yyyy")
-        }
+        return dateLabelFor(state.selectedPeriod, state.currentDate)
+    }
+
+    /** Pure label helper so callers can pass observed state and stay reactive. */
+    fun dateLabelFor(period: TimePeriod, date: Long): String = when (period) {
+        TimePeriod.DAY -> DateUtils.formatDate(date)
+        TimePeriod.MONTH -> DateUtils.formatMonthYear(date)
+        TimePeriod.YEAR -> DateUtils.formatDate(date, "yyyy")
     }
 
     // ========== Search ==========

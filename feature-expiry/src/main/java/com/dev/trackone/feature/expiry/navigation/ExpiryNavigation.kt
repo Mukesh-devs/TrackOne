@@ -45,6 +45,8 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.dev.trackone.core.ui.component.FloatingNavItem
+import com.dev.trackone.core.ui.component.TrackOneFloatingNav
 import com.dev.trackone.feature.expiry.presentation.ExpiryViewModel
 import com.dev.trackone.feature.expiry.presentation.screen.ExpiryAddScreen
 import com.dev.trackone.feature.expiry.presentation.screen.ExpiryDetailScreen
@@ -141,12 +143,14 @@ fun ExpiryNavigation(
                         else -> Unit
                     }
 
-                    ExpiryFloatingNav(
-                        tabs = expiryTabs,
+                    TrackOneFloatingNav(
+                        items = expiryTabs.map {
+                            FloatingNavItem(it.label, it.icon, it.route, emphasized = it.route == ExpiryRoutes.ADD)
+                        },
                         selectedRoute = currentRoute,
-                        onSelect = { tab ->
-                            if (tab.route == ExpiryRoutes.ADD) viewModel.initAddForm()
-                            currentRoute = tab.route
+                        onSelect = { route ->
+                            if (route == ExpiryRoutes.ADD) viewModel.initAddForm()
+                            currentRoute = route
                         },
                         modifier = Modifier.align(Alignment.BottomCenter),
                     )
@@ -193,81 +197,6 @@ fun ExpiryNavigation(
                             viewModel.resetSaveSuccess()
                             navController.popBackStack()
                         },
-                    )
-                }
-            }
-        }
-    }
-}
-
-// ── Floating bottom navigation (selected item = filled circle) ────────────────
-
-@Composable
-private fun ExpiryFloatingNav(
-    tabs: List<ExpiryTab>,
-    selectedRoute: String,
-    onSelect: (ExpiryTab) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Surface(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp)
-            .padding(bottom = 12.dp)
-            .navigationBarsPadding(),
-        shape = RoundedCornerShape(28.dp),
-        color = MaterialTheme.colorScheme.surface,
-        shadowElevation = 10.dp,
-        tonalElevation = 3.dp,
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 10.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            tabs.forEach { tab ->
-                val selected = tab.route == selectedRoute
-                Column(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(16.dp))
-                        .clickable { onSelect(tab) }
-                        .padding(horizontal = 10.dp, vertical = 4.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    if (selected) {
-                        Box(
-                            modifier = Modifier
-                                .size(40.dp)
-                                .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.primary),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Icon(
-                                imageVector = tab.icon,
-                                contentDescription = tab.label,
-                                tint = MaterialTheme.colorScheme.onPrimary,
-                                modifier = Modifier.size(20.dp),
-                            )
-                        }
-                    } else {
-                        Box(modifier = Modifier.size(40.dp), contentAlignment = Alignment.Center) {
-                            Icon(
-                                imageVector = tab.icon,
-                                contentDescription = tab.label,
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(22.dp),
-                            )
-                        }
-                    }
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        text = tab.label,
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
-                        color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
                     )
                 }
             }

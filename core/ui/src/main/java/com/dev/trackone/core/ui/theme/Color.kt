@@ -7,10 +7,10 @@ import androidx.compose.ui.graphics.Color
 // ============================================================================
 
 // Primary — Google Blue
-val PrimaryLight = Color(0xFF1A73E8)
+val PrimaryLight = Color(0xFF0288D1)
 val OnPrimaryLight = Color(0xFFFFFFFF)
-val PrimaryContainerLight = Color(0xFFD3E3FD)
-val OnPrimaryContainerLight = Color(0xFF001D36)
+val PrimaryContainerLight = Color(0xFFB3E5FC)
+val OnPrimaryContainerLight = Color(0xFF014A6E)
 
 // Secondary — Slate Blue
 val SecondaryLight = Color(0xFF5F6368)
@@ -45,10 +45,10 @@ val OutlineVariantLight = Color(0xFFE8EAED)
 // Inverse
 val InverseSurfaceLight = Color(0xFF303134)
 val InverseOnSurfaceLight = Color(0xFFF1F3F4)
-val InversePrimaryLight = Color(0xFF8AB4F8)
+val InversePrimaryLight = Color(0xFF4FC3F7)
 
 // Surface Tones
-val SurfaceTintLight = Color(0xFF1A73E8)
+val SurfaceTintLight = Color(0xFF0288D1)
 val SurfaceBrightLight = Color(0xFFFFFFFF)
 val SurfaceDimLight = Color(0xFFE8EAED)
 val SurfaceContainerLowestLight = Color(0xFFFFFFFF)
@@ -62,10 +62,10 @@ val SurfaceContainerHighestLight = Color(0xFFDADCE0)
 // ============================================================================
 
 // Primary
-val PrimaryDark = Color(0xFF8AB4F8)
-val OnPrimaryDark = Color(0xFF002D6D)
-val PrimaryContainerDark = Color(0xFF0B57D0)
-val OnPrimaryContainerDark = Color(0xFFD3E3FD)
+val PrimaryDark = Color(0xFF4FC3F7)
+val OnPrimaryDark = Color(0xFF00344D)
+val PrimaryContainerDark = Color(0xFF0277BD)
+val OnPrimaryContainerDark = Color(0xFFB3E5FC)
 
 // Secondary
 val SecondaryDark = Color(0xFFBDC1C6)
@@ -100,10 +100,10 @@ val OutlineVariantDark = Color(0xFF3C4043)
 // Inverse
 val InverseSurfaceDark = Color(0xFFE8EAED)
 val InverseOnSurfaceDark = Color(0xFF303134)
-val InversePrimaryDark = Color(0xFF1A73E8)
+val InversePrimaryDark = Color(0xFF0288D1)
 
 // Surface Tones
-val SurfaceTintDark = Color(0xFF8AB4F8)
+val SurfaceTintDark = Color(0xFF4FC3F7)
 val SurfaceBrightDark = Color(0xFF3C4043)
 val SurfaceDimDark = Color(0xFF202124)
 val SurfaceContainerLowestDark = Color(0xFF171717)
@@ -134,6 +134,6 @@ val SurfaceContainerHighestAmoled = Color(0xFF222222)
 val ExpiredRed = Color(0xFFD93025)
 val ActiveGreen = Color(0xFF137333)
 val WarningAmber = Color(0xFFF9AB00)
-val InfoBlue = Color(0xFF1A73E8)
+val InfoBlue = Color(0xFF0288D1)
 val CreditGreen = Color(0xFF137333)
 val DebitRed = Color(0xFFD93025)

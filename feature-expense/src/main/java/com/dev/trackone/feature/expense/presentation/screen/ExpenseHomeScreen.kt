@@ -58,7 +58,7 @@ import com.dev.trackone.feature.expense.presentation.ExpenseUiState
 import com.dev.trackone.feature.expense.presentation.TimePeriod
 import java.util.Calendar
 
-private val HeroGradient = Brush.linearGradient(listOf(Color(0xFF1A73E8), Color(0xFF0B57D0)))
+private val HeroGradient = Brush.linearGradient(listOf(Color(0xFF039BE5), Color(0xFF01579B)))
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -99,6 +99,7 @@ fun ExpenseHomeScreen(
             item {
                 HeroCard(
                     totalSpent = uiState.totalExpense,
+                    balance = uiState.balance,
                     periodWord = periodWord,
                     dateLabel = dateLabel,
                     onNavigateDate = onNavigateDate,
@@ -239,6 +240,7 @@ private fun Header(
 @Composable
 private fun HeroCard(
     totalSpent: Double,
+    balance: Double,
     periodWord: String,
     dateLabel: String,
     onNavigateDate: (Boolean) -> Unit,
@@ -293,6 +295,13 @@ private fun HeroCard(
                         .fillMaxWidth()
                         .height(34.dp),
                 )
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    text = "Remaining Balance: ${CurrencyUtils.formatAmount(balance)}",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Medium,
+                    color = Color.White.copy(alpha = 0.9f),
+                )
             }
         }
     }
@@ -341,11 +350,11 @@ private fun MonthPickerChip(dateLabel: String, onSelectMonth: (Long) -> Unit) {
     }
 }
 
-/** Last 12 months as (label, first-of-month millis), newest first. */
+/** Last 5 years of months as (label, first-of-month millis), newest first — scrollable. */
 private fun recentMonths(): List<Pair<String, Long>> {
-    val out = ArrayList<Pair<String, Long>>(12)
+    val out = ArrayList<Pair<String, Long>>(60)
     val cal = Calendar.getInstance()
-    repeat(12) {
+    repeat(60) {
         cal.set(Calendar.DAY_OF_MONTH, 1)
         cal.set(Calendar.HOUR_OF_DAY, 12)
         cal.set(Calendar.MINUTE, 0)
