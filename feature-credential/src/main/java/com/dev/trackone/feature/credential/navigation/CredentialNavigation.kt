@@ -4,14 +4,28 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.VpnKey
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -87,16 +101,46 @@ fun CredentialNavigation(
     Scaffold(
         topBar = {
             if (isOnMainScreen) {
-                TrackOneTopBar(
-                    title = when (currentRoute) {
-                        CredentialRoutes.HOME -> "Credential Manager"
-                        CredentialRoutes.ADD -> "Add Credential"
-                        CredentialRoutes.SETTINGS -> "Settings"
-                        else -> "Credentials"
-                    },
-                    showSearchIcon = currentRoute == CredentialRoutes.HOME,
-                    onSearchClick = { viewModel.toggleSearch() },
-                )
+                if (currentRoute == CredentialRoutes.HOME) {
+                    // Icon + title header, matching the Expense/Expiry modules.
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .statusBarsPadding()
+                            .padding(start = 20.dp, end = 8.dp, top = 12.dp, bottom = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.VpnKey,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(26.dp),
+                        )
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Text(
+                            text = "Credential Management",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onBackground,
+                            modifier = Modifier.weight(1f),
+                        )
+                        IconButton(onClick = { viewModel.toggleSearch() }) {
+                            Icon(
+                                imageVector = Icons.Default.Search,
+                                contentDescription = "Search",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                } else {
+                    TrackOneTopBar(
+                        title = when (currentRoute) {
+                            CredentialRoutes.ADD -> "Add Credential"
+                            CredentialRoutes.SETTINGS -> "Settings"
+                            else -> "Credentials"
+                        },
+                    )
+                }
             } else {
                 val title = when (currentRoute) {
                     CredentialRoutes.EDIT -> "Edit Credential"

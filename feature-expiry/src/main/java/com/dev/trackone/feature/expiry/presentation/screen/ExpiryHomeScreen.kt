@@ -31,6 +31,7 @@ import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SearchOff
+import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.outlined.FilterList
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -185,6 +186,13 @@ private fun ExpiryHeader(onBellClick: () -> Unit) {
             .padding(start = 20.dp, end = 12.dp, top = 12.dp, bottom = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        Icon(
+            imageVector = Icons.Default.Timer,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(26.dp),
+        )
+        Spacer(modifier = Modifier.width(10.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = "Expiry Tracker",
@@ -356,15 +364,13 @@ fun ExpiryItemCard(
         tonalElevation = 2.dp,
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            // Red accent stripe for expired items
-            if (expired) {
-                Box(
-                    modifier = Modifier
-                        .width(4.dp)
-                        .fillMaxHeight()
-                        .background(ExpiredRed),
-                )
-            }
+            // Status stripe: green when active, red when expired
+            Box(
+                modifier = Modifier
+                    .width(4.dp)
+                    .fillMaxHeight()
+                    .background(if (expired) ExpiredRed else ActiveGreen),
+            )
             Row(
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp),
                 verticalAlignment = Alignment.CenterVertically,

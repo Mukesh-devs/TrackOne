@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -118,6 +120,7 @@ fun DashboardScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .height(IntrinsicSize.Min)
                         .padding(horizontal = 24.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
@@ -128,7 +131,7 @@ fun DashboardScreen(
                         label = "Expiring Today",
                         value = "$expiringTodayCount",
                         subLabel = "Items",
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier.weight(1f).fillMaxHeight(),
                     )
                     OverviewStatCard(
                         icon = Icons.Default.AccountBalanceWallet,
@@ -137,7 +140,7 @@ fun DashboardScreen(
                         label = "Expenses Today",
                         value = CurrencyUtils.formatAmount(todayExpenseTotal),
                         subLabel = "Spent",
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier.weight(1f).fillMaxHeight(),
                     )
                     OverviewStatCard(
                         icon = Icons.Default.Lock,
@@ -146,7 +149,7 @@ fun DashboardScreen(
                         label = "Saved Credentials",
                         value = "$credentialCount",
                         subLabel = "Accounts",
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier.weight(1f).fillMaxHeight(),
                     )
                 }
             }
