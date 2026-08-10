@@ -179,8 +179,8 @@ fun TrackOneApp(
                         selectedIconColor = MaterialTheme.colorScheme.primary,
                         selectedTextColor = MaterialTheme.colorScheme.primary,
                         unselectedContainerColor = androidx.compose.ui.graphics.Color.Transparent,
-                        unselectedIconColor = androidx.compose.ui.graphics.Color.Black,
-                        unselectedTextColor = androidx.compose.ui.graphics.Color.Black,
+                        unselectedIconColor = MaterialTheme.colorScheme.onSurface,
+                        unselectedTextColor = MaterialTheme.colorScheme.onSurface,
                     ),
                     shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp)
                 )
@@ -209,8 +209,8 @@ fun TrackOneApp(
                             selectedIconColor = MaterialTheme.colorScheme.primary,
                             selectedTextColor = MaterialTheme.colorScheme.primary,
                             unselectedContainerColor = androidx.compose.ui.graphics.Color.Transparent,
-                            unselectedIconColor = androidx.compose.ui.graphics.Color.Black,
-                            unselectedTextColor = androidx.compose.ui.graphics.Color.Black,
+                            unselectedIconColor = MaterialTheme.colorScheme.onSurface,
+                            unselectedTextColor = MaterialTheme.colorScheme.onSurface,
                         ),
                         shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp)
                     )

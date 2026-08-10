@@ -27,11 +27,17 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            // R8: shrink + obfuscate. Keep rules live in proguard-rules.pro.
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+        }
+        debug {
+            // Faster incremental builds while developing.
+            isMinifyEnabled = false
         }
     }
 
@@ -42,6 +48,12 @@ android {
             excludes += "META-INF/DEPENDENCIES"
         }
     }
+}
+
+// Export Room schemas to app/schemas/ so future migrations have a baseline to
+// diff against (required by exportSchema = true on AppDatabase).
+ksp {
+    arg("room.schemaLocation", "$projectDir/schemas")
 }
 
 dependencies {

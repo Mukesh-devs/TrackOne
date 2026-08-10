@@ -32,7 +32,12 @@ object DatabaseModule {
             AppDatabase::class.java,
             Constants.DATABASE_NAME,
         )
-            .fallbackToDestructiveMigration()
+            // Only the legacy pre-v4 schemas (which were never exported and so
+            // cannot be migrated) are allowed to wipe. From v4 onward a real
+            // Migration is required, so a future schema change can no longer
+            // silently destroy the user's data.
+            .fallbackToDestructiveMigrationFrom(1, 2, 3)
+            .addMigrations(*AppDatabase.MIGRATIONS)
             .build()
     }
 

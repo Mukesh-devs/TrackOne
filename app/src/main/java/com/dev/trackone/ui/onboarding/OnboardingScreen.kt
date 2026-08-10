@@ -35,7 +35,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 
-private val SkyBlue = Color(0xFF00B4D8)
+// Matches the app primary (sky blue) so onboarding and the app agree.
+private val SkyBlue = Color(0xFF0288D1)
 
 @Composable
 fun OnboardingScreen(
@@ -48,24 +49,24 @@ fun OnboardingScreen(
         OnboardingPage(
             title = "Track Expiries",
             description = "Never miss an expiration date again. Keep track of your food, documents, and subscriptions.",
-            color = Color(0xFF4CAF50)
+            color = Color(0xFF188038)
         ),
         OnboardingPage(
             title = "Manage Expenses",
             description = "Stay on top of your budget. Log your daily expenses and view intuitive analytics.",
-            color = Color(0xFFFF9800)
+            color = Color(0xFFF9AB00)
         ),
         OnboardingPage(
             title = "Secure Credentials",
             description = "Store your passwords securely in one place and access them whenever you need.",
-            color = Color(0xFF2196F3)
+            color = Color(0xFF0288D1)
         )
     )
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.White)
+            .background(MaterialTheme.colorScheme.background)
     ) {
         // Skip Button
         Row(
@@ -133,7 +134,7 @@ fun OnboardingScreen(
             ) {
                 Text(
                     text = if (pagerState.currentPage == pages.size - 1) "Get Started" else "Next",
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.onPrimary,
                     fontWeight = FontWeight.Bold
                 )
             }
@@ -171,7 +172,7 @@ private fun OnboardingPageContent(page: OnboardingPage) {
             text = page.title,
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold,
-            color = Color.Black
+            color = MaterialTheme.colorScheme.onBackground
         )
 
         Spacer(modifier = Modifier.height(16.dp))

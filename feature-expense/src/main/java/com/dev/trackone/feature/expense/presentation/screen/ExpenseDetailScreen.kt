@@ -48,6 +48,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.dev.trackone.core.ui.theme.ActiveGreen
 import com.dev.trackone.core.common.util.CurrencyUtils
 import com.dev.trackone.core.common.util.DateUtils
 import com.dev.trackone.core.ui.component.TrackOneDeleteDialog
@@ -144,7 +145,7 @@ fun ExpenseDetailScreen(
         // 4. Success Badge
         Surface(
             shape = RoundedCornerShape(16.dp),
-            color = Color(0xFFE8F5E9),
+            color = ActiveGreen.copy(alpha = 0.12f),
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -153,14 +154,14 @@ fun ExpenseDetailScreen(
                 Icon(
                     imageVector = Icons.Default.CheckCircle,
                     contentDescription = "Completed",
-                    tint = Color(0xFF2E7D32),
+                    tint = ActiveGreen,
                     modifier = Modifier.size(16.dp)
                 )
                 Spacer(modifier = Modifier.width(6.dp))
                 Text(
                     text = "Completed",
                     style = MaterialTheme.typography.labelMedium,
-                    color = Color(0xFF2E7D32),
+                    color = ActiveGreen,
                     fontWeight = FontWeight.Bold
                 )
             }

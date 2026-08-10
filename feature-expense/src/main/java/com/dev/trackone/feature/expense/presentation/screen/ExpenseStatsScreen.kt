@@ -1,6 +1,5 @@
 package com.dev.trackone.feature.expense.presentation.screen
 
-import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
@@ -57,6 +56,7 @@ fun ExpenseStatsScreen(
     onPeriodChange: (TimePeriod) -> Unit,
     onNavigateDate: (Boolean) -> Unit,
     getCsvData: () -> String,
+    onMessage: (String) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -68,14 +68,14 @@ fun ExpenseStatsScreen(
         if (uri != null) {
             val data = getCsvData()
             if (data.isBlank()) {
-                Toast.makeText(context, "No transactions to export", Toast.LENGTH_SHORT).show()
+                onMessage("No transactions to export")
             } else {
                 runCatching {
                     context.contentResolver.openOutputStream(uri)?.use { it.write(data.toByteArray()) }
                 }.onSuccess {
-                    Toast.makeText(context, "Exported successfully", Toast.LENGTH_SHORT).show()
+                    onMessage("Exported successfully")
                 }.onFailure {
-                    Toast.makeText(context, "Export failed", Toast.LENGTH_SHORT).show()
+                    onMessage("Export failed")
                 }
             }
         }

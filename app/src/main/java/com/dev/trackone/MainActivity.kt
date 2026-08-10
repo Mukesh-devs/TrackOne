@@ -1,5 +1,6 @@
 package com.dev.trackone
 
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -57,7 +58,18 @@ class MainActivity : FragmentActivity() {
         }
         
         enableEdgeToEdge()
-        
+
+        // The app holds passwords, so hide its content from the recent-apps
+        // switcher. Deliberately NOT FLAG_SECURE: that would also block the
+        // user taking their own screenshots. To lock the app down completely,
+        // replace this with:
+        //   window.setFlags(WindowManager.LayoutParams.FLAG_SECURE,
+        //                   WindowManager.LayoutParams.FLAG_SECURE)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            setRecentsScreenshotEnabled(false)
+        }
+
+
         // Restore existing sign-in if available
         googleAuthHelper.getSignedInAccount()?.let { account ->
             viewModel.onSignedIn(account)

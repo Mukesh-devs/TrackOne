@@ -17,10 +17,21 @@ object Dimens {
     val SpacingXxl = 32.dp
     val SpacingXxxl = 48.dp
 
+    // Screen gutters — the single horizontal inset every screen should use.
+    val ScreenPadding = 20.dp
+
     // Card dimensions
     val CardElevation = 2.dp
     val CardCornerRadius = 16.dp
     val CardPadding = 16.dp
+
+    // Elevation scale. Keeping these few and named stops every screen from
+    // inventing its own shadow depth.
+    val ElevationNone = 0.dp
+    val ElevationTonal = 1.dp
+    val ElevationListItem = 3.dp
+    val ElevationCard = 6.dp
+    val ElevationFloating = 10.dp
 
     // Icon sizes
     val IconSizeSm = 20.dp

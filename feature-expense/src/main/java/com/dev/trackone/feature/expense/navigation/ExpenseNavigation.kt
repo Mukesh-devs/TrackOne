@@ -31,6 +31,11 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.text.style.TextAlign
+import kotlinx.coroutines.launch
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -95,8 +100,14 @@ fun ExpenseNavigation(
     val dateLabel = viewModel.dateLabelFor(uiState.selectedPeriod, uiState.currentDate)
 
     var currentTab by remember { mutableStateOf(ExpenseRoutes.HOME) }
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+    fun showMessage(message: String) {
+        scope.launch { snackbarHostState.showSnackbar(message) }
+    }
 
     Surface(modifier = modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+      Box(modifier = Modifier.fillMaxSize()) {
         NavHost(
             navController = navController,
             startDestination = ExpenseRoutes.MAIN,
@@ -174,6 +185,7 @@ fun ExpenseNavigation(
                             onPeriodChange = viewModel::setTimePeriod,
                             onNavigateDate = viewModel::navigateDate,
                             getCsvData = viewModel::generateCsvForCurrentPeriod,
+                            onMessage = ::showMessage,
                         )
 
                         ExpenseRoutes.SETTINGS -> Column(modifier = Modifier.fillMaxSize()) {
@@ -246,6 +258,16 @@ fun ExpenseNavigation(
                 }
             }
         }
+
+        // Above the floating nav so messages are never covered by it.
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .navigationBarsPadding()
+                .padding(bottom = 96.dp),
+        )
+      }
     }
 }
 
@@ -256,9 +278,8 @@ private fun ScreenTitle(title: String) {
     Text(
         text = title,
         style = MaterialTheme.typography.titleLarge,
-        fontWeight = FontWeight.Bold,
         color = MaterialTheme.colorScheme.onBackground,
-        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+        textAlign = TextAlign.Center,
         modifier = Modifier
             .fillMaxWidth()
             .statusBarsPadding()
@@ -285,7 +306,6 @@ private fun ScreenHeader(title: String, onBack: () -> Unit) {
         Text(
             text = title,
             style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onBackground,
         )
     }

@@ -1,15 +1,19 @@
 package com.dev.trackone.ui.settings
 
-import android.widget.Toast
 import androidx.biometric.BiometricManager
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Fingerprint
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.foundation.clickable
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -35,25 +39,28 @@ fun SettingsScreen(
     val isAppLockEnabled by viewModel.isAppLockEnabled.collectAsStateWithLifecycle()
     val context = LocalContext.current
     var showPinSetupDialog by remember { mutableStateOf(false) }
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
 
     BackHandler {
         onNavigateBack()
     }
 
     Scaffold(
-        containerColor = Color.White,
+        containerColor = MaterialTheme.colorScheme.background,
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text("Settings", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.White,
-                    titleContentColor = Color.Black,
-                    navigationIconContentColor = Color.Black
+                    containerColor = MaterialTheme.colorScheme.background,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onSurface
                 )
             )
         }
@@ -67,14 +74,14 @@ fun SettingsScreen(
             Text(
                 text = "Security",
                 style = MaterialTheme.typography.titleMedium,
-                color = Color.Black,
+                color = MaterialTheme.colorScheme.onSurface,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(bottom = 16.dp)
             )
 
                 Surface(
                     shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
-                    color = Color(0xFFF0F0F0),
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Row(
@@ -86,7 +93,7 @@ fun SettingsScreen(
                         Icon(
                             imageVector = Icons.Default.Fingerprint,
                             contentDescription = "Fingerprint",
-                            tint = Color.Black,
+                            tint = MaterialTheme.colorScheme.onSurface,
                             modifier = Modifier.size(32.dp)
                         )
                         Spacer(modifier = Modifier.width(16.dp))
@@ -94,13 +101,13 @@ fun SettingsScreen(
                             Text(
                                 text = "App Lock",
                                 style = MaterialTheme.typography.titleMedium,
-                                color = Color.Black,
+                                color = MaterialTheme.colorScheme.onSurface,
                                 fontWeight = FontWeight.Bold
                             )
                             Text(
                                 text = "Require Fingerprint or PIN to open TrackOne",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = Color.DarkGray
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                         Switch(
@@ -113,7 +120,11 @@ fun SettingsScreen(
                                     if (canAuthenticate == BiometricManager.BIOMETRIC_SUCCESS) {
                                         showPinSetupDialog = true
                                     } else {
-                                        Toast.makeText(context, "Your device does not have Fingerprint setup or available.", Toast.LENGTH_LONG).show()
+                                        scope.launch {
+                                            snackbarHostState.showSnackbar(
+                                                "No fingerprint or screen lock is set up on this device."
+                                            )
+                                        }
                                     }
                                 } else {
                                     viewModel.disableAppLock()
@@ -128,14 +139,14 @@ fun SettingsScreen(
             Text(
                 text = "Data & Sync",
                 style = MaterialTheme.typography.titleMedium,
-                color = Color.Black,
+                color = MaterialTheme.colorScheme.onSurface,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(bottom = 16.dp)
             )
 
             Surface(
                 shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
-                color = Color(0xFFF0F0F0),
+                color = MaterialTheme.colorScheme.surfaceContainerHigh,
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable { onNavigateToBackup() }
@@ -149,7 +160,7 @@ fun SettingsScreen(
                     Icon(
                         imageVector = Icons.Default.CloudUpload,
                         contentDescription = "Backup",
-                        tint = Color.Black,
+                        tint = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.size(32.dp)
                     )
                     Spacer(modifier = Modifier.width(16.dp))
@@ -157,13 +168,13 @@ fun SettingsScreen(
                         Text(
                             text = "Backup & Restore",
                             style = MaterialTheme.typography.titleMedium,
-                            color = Color.Black,
+                            color = MaterialTheme.colorScheme.onSurface,
                             fontWeight = FontWeight.Bold
                         )
                         Text(
                             text = "Backup your data to Google Drive",
                             style = MaterialTheme.typography.bodySmall,
-                            color = Color.DarkGray
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -195,7 +206,7 @@ fun PinSetupDialog(
     Dialog(onDismissRequest = onDismiss) {
         Surface(
             shape = androidx.compose.foundation.shape.RoundedCornerShape(24.dp),
-            color = Color.White,
+            color = MaterialTheme.colorScheme.surface,
             tonalElevation = 6.dp
         ) {
             Column(
@@ -208,7 +219,7 @@ fun PinSetupDialog(
                     imageVector = Icons.Default.Lock,
                     contentDescription = "Lock",
                     modifier = Modifier.size(48.dp),
-                    tint = Color.Black
+                    tint = MaterialTheme.colorScheme.onSurface
                 )
                 Spacer(modifier = Modifier.height(16.dp))
                 
@@ -216,13 +227,13 @@ fun PinSetupDialog(
                     text = if (isConfirming) "Confirm PIN" else "Set a PIN",
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold,
-                    color = Color.Black
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 
                 Text(
                     text = "Used as a fallback if Fingerprint fails",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Color.DarkGray,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 8.dp, bottom = 24.dp)
                 )
 
@@ -250,7 +261,7 @@ fun PinSetupDialog(
                 ) {
                     TextButton(
                         onClick = onDismiss,
-                        colors = androidx.compose.material3.ButtonDefaults.textButtonColors(contentColor = Color.Black)
+                        colors = androidx.compose.material3.ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.primary)
                     ) {
                         Text("Cancel")
                     }
@@ -272,7 +283,7 @@ fun PinSetupDialog(
                                 }
                             }
                         },
-                        colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = Color.Black, contentColor = Color.White)
+                        colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary)
                     ) {
                         Text(if (isConfirming) "Save" else "Next")
                     }

@@ -1,5 +1,6 @@
 package com.dev.trackone.ui.settings
 
+import com.dev.trackone.core.ui.theme.ActiveGreen
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -9,6 +10,7 @@ import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.CloudDone
 import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material.icons.filled.Restore
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -41,16 +43,16 @@ fun BackupScreen(
                 title = { Text("Backup", fontWeight = FontWeight.SemiBold) },
                 navigationIcon = {
                     IconButton(onClick = onClose) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.Black)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.onSurface)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.White,
-                    titleContentColor = Color.Black
+                    containerColor = MaterialTheme.colorScheme.background,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface
                 )
             )
         },
-        containerColor = Color.White
+        containerColor = MaterialTheme.colorScheme.background
     ) { innerPadding ->
         Column(
             modifier = Modifier
@@ -64,13 +66,13 @@ fun BackupScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(16.dp))
-                    .background(Color(0xFFF5F5F5))
+                    .background(MaterialTheme.colorScheme.surfaceContainerHigh)
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Icon(Icons.Default.CloudDone, contentDescription = null, tint = Color.DarkGray)
-                    Text("Last Backup", fontWeight = FontWeight.Bold, color = Color.Black, style = MaterialTheme.typography.titleMedium)
+                    Icon(Icons.Default.CloudDone, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("Last Backup", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.titleMedium)
                 }
 
                 val signedInState = when (syncUiState) {
@@ -83,21 +85,21 @@ fun BackupScreen(
                 if (signedInState != null) {
                     Text(
                         text = "Google Drive: ${signedInState.lastBackupTime?.let { formatTime(it) } ?: "Never"}",
-                        color = Color.DarkGray,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         style = MaterialTheme.typography.bodyMedium
                     )
                     Text(
                         text = "Size: ${formatSize(signedInState.backupSizeBytes)}",
-                        color = Color.DarkGray,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         style = MaterialTheme.typography.bodyMedium
                     )
                 } else if (syncUiState is SyncUiState.Loading) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Color.Black, strokeWidth = 2.dp)
-                        Text("Syncing...", color = Color.DarkGray)
+                        CircularProgressIndicator(modifier = Modifier.size(20.dp), color = MaterialTheme.colorScheme.onSurface, strokeWidth = 2.dp)
+                        Text("Syncing...", color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 } else {
-                    Text("Sign in to view backup details.", color = Color.DarkGray)
+                    Text("Sign in to view backup details.", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
 
@@ -105,7 +107,7 @@ fun BackupScreen(
             Button(
                 onClick = onBackupClick,
                 modifier = Modifier.fillMaxWidth().height(56.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color.Black, contentColor = Color.White),
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary),
                 shape = RoundedCornerShape(16.dp),
                 enabled = syncUiState is SyncUiState.SignedIn || syncUiState is SyncUiState.Success || syncUiState is SyncUiState.Error
             ) {
@@ -117,7 +119,7 @@ fun BackupScreen(
             Button(
                 onClick = onRestoreClick,
                 modifier = Modifier.fillMaxWidth().height(56.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF5F5F5), contentColor = Color.Black),
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh, contentColor = MaterialTheme.colorScheme.onSurface),
                 shape = RoundedCornerShape(16.dp),
                 enabled = syncUiState is SyncUiState.SignedIn || syncUiState is SyncUiState.Success || syncUiState is SyncUiState.Error
             ) {
@@ -127,10 +129,10 @@ fun BackupScreen(
             }
 
             Spacer(modifier = Modifier.height(8.dp))
-            HorizontalDivider(color = Color(0xFFEEEEEE))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
             // Google Account Settings
-            Text("Google Drive settings", fontWeight = FontWeight.Bold, color = Color.Black, style = MaterialTheme.typography.titleMedium)
+            Text("Google Drive settings", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.titleMedium)
             
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -144,19 +146,19 @@ fun BackupScreen(
                 )
                 Spacer(modifier = Modifier.width(16.dp))
                 Column {
-                    Text("Google Account", fontWeight = FontWeight.SemiBold, color = Color.Black)
+                    Text("Google Account", fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
                     val email = when (syncUiState) {
                         is SyncUiState.SignedIn -> syncUiState.accountEmail
                         is SyncUiState.Success -> syncUiState.signedInState?.accountEmail ?: "Not selected"
                         is SyncUiState.Error -> syncUiState.signedInState?.accountEmail ?: "Not selected"
                         else -> "Not selected"
                     }
-                    Text(email, color = Color.DarkGray, style = MaterialTheme.typography.bodyMedium)
+                    Text(email, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
                 }
             }
             
             if (syncUiState is SyncUiState.Success) {
-                Text(syncUiState.message, color = Color(0xFF4CAF50), fontWeight = FontWeight.Medium)
+                Text(syncUiState.message, color = ActiveGreen, fontWeight = FontWeight.Medium)
             } else if (syncUiState is SyncUiState.Error) {
                 Text(syncUiState.message, color = Color.Red, fontWeight = FontWeight.Medium)
             }

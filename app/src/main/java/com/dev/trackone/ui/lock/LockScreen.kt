@@ -7,7 +7,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Backspace
+import androidx.compose.material.icons.automirrored.filled.Backspace
 import androidx.compose.material.icons.filled.Fingerprint
 import androidx.compose.foundation.Image
 import androidx.compose.ui.res.painterResource
@@ -77,7 +77,7 @@ fun LockScreen(
 
     Surface(
         modifier = Modifier.fillMaxSize(),
-        color = Color.White
+        color = MaterialTheme.colorScheme.surface
     ) {
         Column(
             modifier = Modifier
@@ -104,7 +104,7 @@ fun LockScreen(
             Text(
                 text = "Enter PIN to unlock",
                 style = MaterialTheme.typography.bodyLarge,
-                color = Color.Black,
+                color = MaterialTheme.colorScheme.onSurface,
                 fontWeight = FontWeight.Medium,
                 modifier = Modifier.padding(top = 8.dp, bottom = 32.dp)
             )
@@ -120,7 +120,7 @@ fun LockScreen(
                             .size(16.dp)
                             .clip(CircleShape)
                             .background(
-                                if (i < pin.length) Color.Black
+                                if (i < pin.length) MaterialTheme.colorScheme.onSurface
                                 else Color.LightGray.copy(alpha = 0.5f)
                             )
                     )
@@ -165,7 +165,7 @@ fun LockScreen(
                 Text(
                     text = "Forgot PIN?",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Color.DarkGray,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontWeight = FontWeight.SemiBold
                 )
             }
@@ -176,10 +176,10 @@ fun LockScreen(
         if (showResetWarning) {
             AlertDialog(
                 onDismissRequest = { showResetWarning = false },
-                containerColor = Color.White,
+                containerColor = MaterialTheme.colorScheme.background,
                 shape = RoundedCornerShape(24.dp),
-                title = { Text("Reset App?", fontWeight = FontWeight.Bold, color = Color.Black) },
-                text = { Text("Resetting the app will erase all your local TrackOne data and disable App Lock. You can restore your data from your latest Google Drive backup after resetting.\n\nAre you sure you want to proceed?", color = Color.DarkGray) },
+                title = { Text("Reset App?", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface) },
+                text = { Text("Resetting the app will erase all your local TrackOne data and disable App Lock. You can restore your data from your latest Google Drive backup after resetting.\n\nAre you sure you want to proceed?", color = MaterialTheme.colorScheme.onSurfaceVariant) },
                 confirmButton = {
                     Button(
                         onClick = {
@@ -191,7 +191,7 @@ fun LockScreen(
                                 (context as? android.app.Activity)?.finish()
                             }
                         },
-                        colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = Color.Black, contentColor = Color.White)
+                        colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary)
                     ) {
                         Text("Reset App")
                     }
@@ -199,7 +199,7 @@ fun LockScreen(
                 dismissButton = {
                     TextButton(
                         onClick = { showResetWarning = false },
-                        colors = androidx.compose.material3.ButtonDefaults.textButtonColors(contentColor = Color.Black)
+                        colors = androidx.compose.material3.ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.primary)
                     ) {
                         Text("Cancel")
                     }
@@ -273,7 +273,7 @@ fun NumberPad(
                     modifier = Modifier
                         .size(72.dp)
                         .clip(RoundedCornerShape(20.dp))
-                        .background(Color.White)
+                        .background(MaterialTheme.colorScheme.background)
                         .clickable { onBiometricClick() },
                     contentAlignment = Alignment.Center
                 ) {
@@ -287,7 +287,7 @@ fun NumberPad(
                                 scaleY = scale
                                 this.alpha = alpha
                             },
-                        tint = Color.Black
+                        tint = MaterialTheme.colorScheme.onSurface
                     )
                 }
             } else {
@@ -309,10 +309,10 @@ fun NumberPad(
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    imageVector = Icons.Default.Backspace,
+                    imageVector = Icons.AutoMirrored.Filled.Backspace,
                     contentDescription = "Backspace",
                     modifier = Modifier.size(28.dp),
-                    tint = Color.Black
+                    tint = MaterialTheme.colorScheme.onSurface
                 )
             }
         }
@@ -325,7 +325,7 @@ fun NumberPadButton(text: String, onClick: () -> Unit) {
         modifier = Modifier
             .size(72.dp)
             .clip(RoundedCornerShape(20.dp))
-            .background(Color(0xFFF5F5F5))
+            .background(MaterialTheme.colorScheme.surfaceContainerHigh)
             .clickable { onClick() },
         contentAlignment = Alignment.Center
     ) {
@@ -333,7 +333,7 @@ fun NumberPadButton(text: String, onClick: () -> Unit) {
             text = text,
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Medium,
-            color = Color.Black
+            color = MaterialTheme.colorScheme.onSurface
         )
     }
 }

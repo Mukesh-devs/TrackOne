@@ -1,6 +1,7 @@
 package com.dev.trackone.sync
 
 import android.content.Context
+import android.util.Log
 import com.dev.trackone.feature.credential.data.local.CredentialDao
 import com.dev.trackone.feature.expense.data.local.ExpenseDao
 import com.dev.trackone.feature.expiry.data.local.ExpiryDao
@@ -37,7 +38,7 @@ class SyncManager(
             
             Result.success(Unit)
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e(TAG, "Backup failed", e)
             Result.failure(e)
         }
     }
@@ -69,7 +70,7 @@ class SyncManager(
             
             Result.success(Unit)
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e(TAG, "Restore failed", e)
             Result.failure(e)
         }
     }
@@ -82,7 +83,10 @@ class SyncManager(
             val driveHelper = DriveServiceHelper(context, account)
             driveHelper.getBackupMetadata()
         } catch (e: Exception) {
-            e.printStackTrace()
+            // Callers treat null as "no backup yet", so log the real cause —
+            // otherwise a genuine Drive/auth error is indistinguishable from
+            // simply never having backed up.
+            Log.e(TAG, "Could not read backup metadata", e)
             null
         }
     }
@@ -110,5 +114,9 @@ class SyncManager(
         ) { expiry, expense, credential ->
             maxOf(expiry ?: 0L, expense ?: 0L, credential ?: 0L)
         }
+    }
+
+    private companion object {
+        const val TAG = "SyncManager"
     }
 }

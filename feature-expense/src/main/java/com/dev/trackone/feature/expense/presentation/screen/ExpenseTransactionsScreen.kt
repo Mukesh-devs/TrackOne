@@ -1,6 +1,5 @@
 package com.dev.trackone.feature.expense.presentation.screen
 
-import android.widget.Toast
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -26,7 +25,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.FilterList
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -41,7 +39,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.dev.trackone.core.common.util.CurrencyUtils
@@ -66,11 +63,6 @@ fun ExpenseTransactionsScreen(
     onRefresh: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
-    val context = LocalContext.current
-    val notImplementedToast = {
-        Toast.makeText(context, "Coming soon!", Toast.LENGTH_SHORT).show()
-    }
-
     // Group items by day (start of day millis)
     val groupedItems = remember(uiState.items) {
         uiState.items.groupBy { DateUtils.getStartOfDay(it.date) }
@@ -105,12 +97,6 @@ fun ExpenseTransactionsScreen(
                     color = MaterialTheme.colorScheme.onBackground,
                     modifier = Modifier.weight(1f),
                 )
-                IconButton(onClick = notImplementedToast) {
-                    Icon(Icons.Default.Search, contentDescription = "Search", tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-                IconButton(onClick = notImplementedToast) {
-                    Icon(Icons.Default.FilterList, contentDescription = "Filter", tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
             }
         },
         bottomBar = {
@@ -143,7 +129,7 @@ fun ExpenseTransactionsScreen(
                             text = CurrencyUtils.formatAmount(uiState.totalExpense),
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold,
-                            color = Color(0xFFE65100) // Orange color
+                            color = MaterialTheme.colorScheme.primary
                         )
                         Icon(
                             imageVector = Icons.Default.ChevronRight,

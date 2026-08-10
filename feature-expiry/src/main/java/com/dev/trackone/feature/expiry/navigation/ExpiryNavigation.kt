@@ -27,8 +27,14 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -88,6 +94,8 @@ fun ExpiryNavigation(
     val formState by viewModel.formState.collectAsStateWithLifecycle()
 
     var currentRoute by remember { mutableStateOf(ExpiryRoutes.HOME) }
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
 
     Surface(
         modifier = modifier.fillMaxSize(),
@@ -123,7 +131,21 @@ fun ExpiryNavigation(
                                 viewModel.selectItem(item)
                                 navController.navigate(ExpiryRoutes.DETAIL)
                             },
-                            onTrashItem = { viewModel.trashItem(it) },
+                            onTrashItem = { item ->
+                                viewModel.trashItem(item)
+                                // Swiping is easy to do by accident — always
+                                // offer a way back.
+                                scope.launch {
+                                    val result = snackbarHostState.showSnackbar(
+                                        message = "Moved to trash",
+                                        actionLabel = "Undo",
+                                        duration = SnackbarDuration.Short,
+                                    )
+                                    if (result == SnackbarResult.ActionPerformed) {
+                                        viewModel.restoreItem(item)
+                                    }
+                                }
+                            },
                             onSearchQueryChange = { viewModel.onSearchQueryChange(it) },
                         )
 
@@ -170,6 +192,15 @@ fun ExpiryNavigation(
                             currentRoute = route
                         },
                         modifier = Modifier.align(Alignment.BottomCenter),
+                    )
+
+                    // Sits above the floating nav so it is never covered.
+                    SnackbarHost(
+                        hostState = snackbarHostState,
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .navigationBarsPadding()
+                            .padding(bottom = 96.dp),
                     )
                 }
             }

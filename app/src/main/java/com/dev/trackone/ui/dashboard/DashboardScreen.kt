@@ -6,13 +6,14 @@ import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -23,16 +24,13 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.CalendarToday
-import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.VpnKey
-import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.outlined.Cloud
 import androidx.compose.material.icons.outlined.CloudDone
 import androidx.compose.material.icons.outlined.CloudOff
@@ -49,18 +47,23 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.dev.trackone.core.common.util.CurrencyUtils
+import com.dev.trackone.core.ui.theme.ActiveGreen
 import com.dev.trackone.core.ui.theme.Dimens
+import com.dev.trackone.core.ui.theme.WarningAmber
 import java.util.Calendar
 
 /**
- * Dashboard home screen showing overview of all 3 modules.
+ * Dashboard — the app's home hub.
+ *
+ * Shows today's snapshot across all three modules and acts as the single entry
+ * point into each of them. Fully theme-token driven, so it follows the app
+ * palette (and renders correctly in dark mode) instead of baking in colours.
  */
 @Composable
 fun DashboardScreen(
@@ -74,19 +77,19 @@ fun DashboardScreen(
     onExpiryClick: () -> Unit,
     onExpenseClick: () -> Unit,
     onCredentialClick: () -> Unit,
+    // Preserves the previous hardcoded greeting; hoisted to a parameter so it
+    // can be driven from preferences later without touching this screen.
+    userName: String = "Mukesh",
     modifier: Modifier = Modifier,
 ) {
     Surface(
         modifier = modifier.fillMaxSize(),
-        color = Color(0xFFF8F9FA),
+        color = MaterialTheme.colorScheme.background,
     ) {
         LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .statusBarsPadding(),
-            contentPadding = PaddingValues(bottom = 32.dp),
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(bottom = Dimens.SpacingXxl),
         ) {
-            // Top bar: Menu + Notification bell + Cloud icon
             item {
                 TopBar(
                     onMenuClick = onMenuClick,
@@ -96,126 +99,87 @@ fun DashboardScreen(
                 )
             }
 
-            // Greeting
+            item { GreetingSection(userName = userName) }
+
             item {
-                GreetingSection()
+                SectionTitle(text = "Today's Overview", topPadding = Dimens.SpacingXl)
             }
 
-            // Today's Overview header
-            item {
-                Text(
-                    text = "Today's Overview",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFF1F1F1F),
-                    modifier = Modifier.padding(
-                        start = 24.dp, end = 24.dp,
-                        top = 24.dp, bottom = 12.dp
-                    ),
-                )
-            }
-
-            // Overview cards row
             item {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
+                        // Equal-height cards regardless of label wrapping.
                         .height(IntrinsicSize.Min)
-                        .padding(horizontal = 24.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        .padding(horizontal = Dimens.ScreenPadding),
+                    horizontalArrangement = Arrangement.spacedBy(Dimens.SpacingMd),
                 ) {
                     OverviewStatCard(
                         icon = Icons.Default.CalendarToday,
-                        iconTint = Color(0xFF1B5E20),
-                        iconBgColor = Color(0xFFE8F5E9),
-                        label = "Expiring Today",
+                        accent = WarningAmber,
+                        label = "Expiring",
                         value = "$expiringTodayCount",
-                        subLabel = "Items",
+                        subLabel = "today",
+                        onClick = onExpiryClick,
                         modifier = Modifier.weight(1f).fillMaxHeight(),
                     )
                     OverviewStatCard(
                         icon = Icons.Default.AccountBalanceWallet,
-                        iconTint = Color(0xFFE65100),
-                        iconBgColor = Color(0xFFFFF3E0),
-                        label = "Expenses Today",
+                        accent = MaterialTheme.colorScheme.primary,
+                        label = "Spent",
                         value = CurrencyUtils.formatAmount(todayExpenseTotal),
-                        subLabel = "Spent",
+                        subLabel = "today",
+                        onClick = onExpenseClick,
                         modifier = Modifier.weight(1f).fillMaxHeight(),
                     )
                     OverviewStatCard(
-                        icon = Icons.Default.Lock,
-                        iconTint = Color(0xFF0D47A1),
-                        iconBgColor = Color(0xFFE3F2FD),
-                        label = "Saved Credentials",
+                        icon = Icons.Default.VpnKey,
+                        accent = ActiveGreen,
+                        label = "Saved",
                         value = "$credentialCount",
-                        subLabel = "Accounts",
+                        subLabel = "accounts",
+                        onClick = onCredentialClick,
                         modifier = Modifier.weight(1f).fillMaxHeight(),
                     )
                 }
             }
 
-            // Quick Access header
-            item {
-                Text(
-                    text = "Quick Access",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFF1F1F1F),
-                    modifier = Modifier.padding(
-                        start = 24.dp, end = 24.dp,
-                        top = 28.dp, bottom = 12.dp
-                    ),
-                )
-            }
+            item { SectionTitle(text = "Modules", topPadding = Dimens.SpacingXl) }
 
-            // Quick Access module cards
             item {
-                QuickAccessCard(
+                ModuleCard(
                     icon = Icons.Default.Timer,
                     title = "Expiry Tracker",
-                    subtitle = "Track items and never miss expiry",
-                    gradientColors = listOf(Color(0xFFE8F5E9), Color(0xFFC8E6C9)),
-                    iconBgColor = Color(0xFF1B5E20),
-                    chevronColor = Color(0xFF388E3C),
+                    subtitle = "Track items before they expire",
+                    accent = WarningAmber,
                     onClick = onExpiryClick,
-                    modifier = Modifier.padding(horizontal = 24.dp),
                 )
             }
+            item { Spacer(modifier = Modifier.height(Dimens.SpacingMd)) }
             item {
-                Spacer(modifier = Modifier.height(12.dp))
-            }
-            item {
-                QuickAccessCard(
+                ModuleCard(
                     icon = Icons.Default.AccountBalanceWallet,
                     title = "Expense Tracker",
-                    subtitle = "Manage expenses and stay on budget",
-                    gradientColors = listOf(Color(0xFFFFF3E0), Color(0xFFFFE0B2)),
-                    iconBgColor = Color(0xFFE65100),
-                    chevronColor = Color(0xFFEF6C00),
+                    subtitle = "Manage spending and stay on budget",
+                    accent = MaterialTheme.colorScheme.primary,
                     onClick = onExpenseClick,
-                    modifier = Modifier.padding(horizontal = 24.dp),
                 )
             }
+            item { Spacer(modifier = Modifier.height(Dimens.SpacingMd)) }
             item {
-                Spacer(modifier = Modifier.height(12.dp))
-            }
-            item {
-                QuickAccessCard(
+                ModuleCard(
                     icon = Icons.Default.VpnKey,
                     title = "Credential Manager",
                     subtitle = "Securely store and manage accounts",
-                    gradientColors = listOf(Color(0xFFE3F2FD), Color(0xFFBBDEFB)),
-                    iconBgColor = Color(0xFF0D47A1),
-                    chevronColor = Color(0xFF1565C0),
+                    accent = ActiveGreen,
                     onClick = onCredentialClick,
-                    modifier = Modifier.padding(horizontal = 24.dp),
                 )
             }
         }
     }
 }
 
-// ─── Top Bar ────────────────────────────────────────────────────────────────────
+// ─── Top bar ────────────────────────────────────────────────────────────────────
 
 @Composable
 private fun TopBar(
@@ -227,34 +191,48 @@ private fun TopBar(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 8.dp, vertical = 8.dp),
+            .statusBarsPadding()
+            .padding(horizontal = Dimens.SpacingSm, vertical = Dimens.SpacingSm),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
         IconButton(onClick = onMenuClick) {
             Icon(
                 imageVector = Icons.Default.Menu,
-                contentDescription = "Menu",
-                tint = Color(0xFF1F1F1F),
+                contentDescription = "Open menu",
+                tint = MaterialTheme.colorScheme.onBackground,
             )
         }
 
-        Row {
-            // Cloud/Backup icon
-            IconButton(onClick = onCloudClick) {
-                val cloudIcon = if (!isSignedIn) {
-                    Icons.Outlined.CloudOff
-                } else when (isBackupPending) {
-                    true -> Icons.Outlined.CloudUpload
-                    false -> Icons.Outlined.CloudDone
-                    null -> Icons.Outlined.Cloud
-                }
-                Icon(
-                    imageVector = cloudIcon,
-                    contentDescription = "Cloud Sync",
-                    tint = Color(0xFF5F6368),
-                )
-            }
+        val (cloudIcon, cloudLabel, cloudTint) = when {
+            !isSignedIn -> Triple(
+                Icons.Outlined.CloudOff,
+                "Cloud backup — not signed in",
+                MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            isBackupPending == true -> Triple(
+                Icons.Outlined.CloudUpload,
+                "Cloud backup — changes pending",
+                WarningAmber,
+            )
+            isBackupPending == false -> Triple(
+                Icons.Outlined.CloudDone,
+                "Cloud backup — up to date",
+                ActiveGreen,
+            )
+            else -> Triple(
+                Icons.Outlined.Cloud,
+                "Cloud backup",
+                MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        IconButton(onClick = onCloudClick) {
+            Icon(
+                imageVector = cloudIcon,
+                // Conveys sync state to screen readers, not just colour.
+                contentDescription = cloudLabel,
+                tint = cloudTint,
+            )
         }
     }
 }
@@ -262,172 +240,191 @@ private fun TopBar(
 // ─── Greeting ───────────────────────────────────────────────────────────────────
 
 @Composable
-private fun GreetingSection() {
-    val hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
-    val greeting = when {
-        hour < 12 -> "Good Morning,"
-        hour < 17 -> "Good Afternoon,"
-        else -> "Good Evening,"
+private fun GreetingSection(userName: String) {
+    val greeting = remember {
+        when (Calendar.getInstance().get(Calendar.HOUR_OF_DAY)) {
+            in 0..11 -> "Good morning"
+            in 12..16 -> "Good afternoon"
+            else -> "Good evening"
+        }
     }
 
-    Column(
-        modifier = Modifier.padding(horizontal = 24.dp, vertical = 4.dp),
-    ) {
+    Column(modifier = Modifier.padding(horizontal = Dimens.ScreenPadding, vertical = Dimens.SpacingXs)) {
         Text(
             text = greeting,
             style = MaterialTheme.typography.bodyLarge,
-            color = Color(0xFF388E3C),
+            color = MaterialTheme.colorScheme.primary,
             fontWeight = FontWeight.Medium,
         )
         Text(
-            text = "Mukesh 👋",
+            text = userName,
             style = MaterialTheme.typography.headlineLarge,
-            fontWeight = FontWeight.Bold,
-            color = Color(0xFF1F1F1F),
+            color = MaterialTheme.colorScheme.onBackground,
         )
     }
 }
 
-// ─── Overview Stat Card ─────────────────────────────────────────────────────────
+@Composable
+private fun SectionTitle(text: String, topPadding: androidx.compose.ui.unit.Dp) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.titleMedium,
+        fontWeight = FontWeight.Bold,
+        color = MaterialTheme.colorScheme.onBackground,
+        modifier = Modifier.padding(
+            start = Dimens.ScreenPadding,
+            end = Dimens.ScreenPadding,
+            top = topPadding,
+            bottom = Dimens.SpacingMd,
+        ),
+    )
+}
+
+// ─── Overview stat card ─────────────────────────────────────────────────────────
 
 @Composable
 private fun OverviewStatCard(
     icon: ImageVector,
-    iconTint: Color,
-    iconBgColor: Color,
+    accent: Color,
     label: String,
     value: String,
     subLabel: String,
+    onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val interaction = remember { MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+    val scale by animateFloatAsState(
+        targetValue = if (pressed) 0.96f else 1f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
+        label = "stat_scale",
+    )
+
     Surface(
-        modifier = modifier,
-        shape = RoundedCornerShape(16.dp),
-        color = Color.White,
-        shadowElevation = 1.dp,
-        tonalElevation = 0.dp,
+        modifier = modifier
+            .scale(scale)
+            .clickable(interactionSource = interaction, indication = null, onClick = onClick),
+        shape = MaterialTheme.shapes.large,
+        color = MaterialTheme.colorScheme.surface,
+        tonalElevation = Dimens.ElevationTonal,
+        shadowElevation = Dimens.ElevationListItem,
     ) {
-        Column(
-            modifier = Modifier.padding(12.dp),
-        ) {
-            // Icon circle
+        Column(modifier = Modifier.padding(Dimens.SpacingMd)) {
             Box(
                 modifier = Modifier
                     .size(36.dp)
                     .clip(CircleShape)
-                    .background(iconBgColor),
+                    .background(accent.copy(alpha = 0.14f)),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
                     imageVector = icon,
                     contentDescription = null,
-                    tint = iconTint,
+                    tint = accent,
                     modifier = Modifier.size(18.dp),
                 )
             }
 
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(Dimens.SpacingMd))
 
             Text(
                 text = label,
-                style = MaterialTheme.typography.labelSmall,
-                color = iconTint,
-                fontWeight = FontWeight.SemiBold,
-                lineHeight = 14.sp,
+                style = MaterialTheme.typography.labelMedium,
+                color = accent,
+                maxLines = 1,
             )
 
-            Spacer(modifier = Modifier.height(6.dp))
+            Spacer(modifier = Modifier.height(Dimens.SpacingXs))
 
             Text(
                 text = value,
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
-                color = Color(0xFF1F1F1F),
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                // Long currency values shrink rather than truncate on small screens.
+                overflow = TextOverflow.Ellipsis,
             )
-
             Text(
                 text = subLabel,
                 style = MaterialTheme.typography.bodySmall,
-                color = Color(0xFF9E9E9E),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
             )
         }
     }
 }
 
-// ─── Quick Access Card ──────────────────────────────────────────────────────────
+// ─── Module card ────────────────────────────────────────────────────────────────
 
 @Composable
-private fun QuickAccessCard(
+private fun ModuleCard(
     icon: ImageVector,
     title: String,
     subtitle: String,
-    gradientColors: List<Color>,
-    iconBgColor: Color,
-    chevronColor: Color,
+    accent: Color,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier,
 ) {
-    val interactionSource = remember { MutableInteractionSource() }
+    val interaction = remember { MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+    val scale by animateFloatAsState(
+        targetValue = if (pressed) 0.98f else 1f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
+        label = "module_scale",
+    )
 
     Surface(
-        modifier = modifier
+        modifier = Modifier
             .fillMaxWidth()
-            .clickable(
-                interactionSource = interactionSource,
-                indication = null,
-                onClick = onClick,
-            ),
-        shape = RoundedCornerShape(20.dp),
-        shadowElevation = 2.dp,
+            .padding(horizontal = Dimens.ScreenPadding)
+            .scale(scale)
+            .clickable(interactionSource = interaction, indication = null, onClick = onClick),
+        shape = MaterialTheme.shapes.extraLarge,
+        color = MaterialTheme.colorScheme.surface,
+        tonalElevation = Dimens.ElevationTonal,
+        shadowElevation = Dimens.ElevationListItem,
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(
-                    brush = Brush.horizontalGradient(gradientColors),
-                    shape = RoundedCornerShape(20.dp),
-                )
-                .padding(horizontal = 20.dp, vertical = 20.dp),
+            modifier = Modifier.padding(Dimens.CardPadding),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            // Icon circle
             Box(
                 modifier = Modifier
                     .size(48.dp)
                     .clip(CircleShape)
-                    .background(iconBgColor),
+                    .background(accent.copy(alpha = 0.14f)),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
                     imageVector = icon,
                     contentDescription = null,
-                    tint = Color.White,
-                    modifier = Modifier.size(24.dp),
+                    tint = accent,
+                    modifier = Modifier.size(Dimens.IconSizeMd),
                 )
             }
 
-            Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.width(Dimens.SpacingLg))
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = title,
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFF1F1F1F),
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     text = subtitle,
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color(0xFF757575),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
                 )
             }
 
             Icon(
-                imageVector = Icons.Default.ChevronRight,
-                contentDescription = "Open",
-                tint = chevronColor,
-                modifier = Modifier.size(24.dp),
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(Dimens.IconSizeMd),
             )
         }
     }

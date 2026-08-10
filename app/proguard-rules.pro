@@ -1,21 +1,105 @@
-# Add project specific ProGuard rules here.
-# You can control the set of applied configuration files using the
-# proguardFiles setting in build.gradle.
-#
-# For more details, see
-#   http://developer.android.com/guide/developing/tools/proguard.html
+# =============================================================================
+# TrackOne — R8 / ProGuard rules
+# =============================================================================
+# R8 is enabled for release builds (isMinifyEnabled = true). Everything below is
+# required because the corresponding library resolves types by reflection, which
+# R8 cannot see. Removing a rule here will typically surface as a crash only in
+# a release build, so please test `assembleRelease` after editing.
+# =============================================================================
 
-# If your project uses WebView with JS, uncomment the following
-# and specify the fully qualified class name to the JavaScript interface
-# class:
-#-keepclassmembers class fqcn.of.javascript.interface.for.webview {
-#   public *;
-#}
+# Keep line numbers so release crash reports stay readable, but hide the
+# original source file names.
+-keepattributes SourceFile,LineNumberTable
+-renamesourcefileattribute SourceFile
 
-# Uncomment this to preserve the line number information for
-# debugging stack traces.
-#-keepattributes SourceFile,LineNumberTable
+# Generic signatures / annotations are needed by reflective JSON mappers.
+-keepattributes Signature,InnerClasses,EnclosingMethod
+-keepattributes *Annotation*,RuntimeVisibleAnnotations,AnnotationDefault
 
-# If you keep the line number information, uncomment this to
-# hide the original source file name.
-#-renamesourcefileattribute SourceFile
+# -----------------------------------------------------------------------------
+# Kotlin
+# -----------------------------------------------------------------------------
+-keepclassmembers class **$WhenMappings { <fields>; }
+-keepclassmembers class kotlin.Metadata { public <methods>; }
+-dontwarn kotlin.**
+-dontwarn kotlinx.**
+
+# Coroutines
+-keepclassmembers class kotlinx.coroutines.** { volatile <fields>; }
+-dontwarn kotlinx.coroutines.**
+
+# -----------------------------------------------------------------------------
+# Room — entities are instantiated reflectively by generated code
+# -----------------------------------------------------------------------------
+-keep class * extends androidx.room.RoomDatabase { <init>(); }
+-keep @androidx.room.Entity class * { *; }
+-keep @androidx.room.Dao interface * { *; }
+-dontwarn androidx.room.paging.**
+
+# App entities (defensive — they are also @Entity annotated)
+-keep class com.dev.trackone.**.data.local.** { *; }
+
+# -----------------------------------------------------------------------------
+# Hilt / Dagger
+# -----------------------------------------------------------------------------
+-keep class dagger.hilt.** { *; }
+-keep class javax.inject.** { *; }
+-keep class * extends dagger.hilt.android.internal.managers.ViewComponentManager$FragmentContextWrapper
+-keepclasseswithmembers class * { @javax.inject.Inject <init>(...); }
+-dontwarn dagger.hilt.**
+
+# -----------------------------------------------------------------------------
+# Google API client / Drive / GSON  (heavy reflection — required)
+# -----------------------------------------------------------------------------
+-keep class com.google.api.client.** { *; }
+-keep class com.google.api.services.drive.** { *; }
+-keep class com.google.api.services.drive.model.** { *; }
+-keep class com.google.gson.** { *; }
+
+# @Key drives the Google HTTP client's JSON (de)serialisation by reflection.
+-keepclassmembers class * {
+    @com.google.api.client.util.Key <fields>;
+}
+-keepclasseswithmembers class * {
+    @com.google.api.client.util.Key <fields>;
+}
+
+# Play Services auth
+-keep class com.google.android.gms.auth.** { *; }
+-keep class com.google.android.gms.common.** { *; }
+-dontwarn com.google.android.gms.**
+
+# The Google HTTP stack references optional Apache/JDK classes that are absent
+# on Android; silence them rather than failing the build.
+-dontwarn com.google.api.client.**
+-dontwarn com.google.common.**
+-dontwarn org.apache.http.**
+-dontwarn android.net.http.AndroidHttpClient
+-dontwarn javax.naming.**
+-dontwarn java.awt.**
+-dontwarn org.joda.time.**
+-dontwarn sun.misc.**
+
+# -----------------------------------------------------------------------------
+# AndroidX Biometric / DataStore / Compose
+# -----------------------------------------------------------------------------
+-keep class androidx.biometric.** { *; }
+-dontwarn androidx.datastore.**
+
+# Compose keeps what it needs via its own consumer rules; only @Preview helpers
+# would be stripped, which is desirable in release.
+
+# -----------------------------------------------------------------------------
+# App models — kept so backup/restore JSON keeps working after obfuscation
+# -----------------------------------------------------------------------------
+-keep class com.dev.trackone.**.domain.model.** { *; }
+-keep class com.dev.trackone.sync.** { *; }
+
+# Enum values are looked up by name in the backup format (ExpenseCategory,
+# PaymentMode) — do not let R8 rename or remove them.
+-keepclassmembers enum com.dev.trackone.** {
+    public static **[] values();
+    public static ** valueOf(java.lang.String);
+    **[] $VALUES;
+    public *;
+}
