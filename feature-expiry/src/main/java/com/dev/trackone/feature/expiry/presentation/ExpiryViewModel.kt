@@ -88,11 +88,19 @@ class ExpiryViewModel @Inject constructor(
     // ========== Selection ==========
 
     fun refresh() {
-        // Data is Flow-backed and always live; this just drives the pull indicator.
+        // Pulls straight from the API, bypassing the background-refresh throttle.
+        // Room's flows push the fresh rows through the existing collector, so
+        // there is nothing to re-subscribe here.
         viewModelScope.launch {
             _uiState.update { it.copy(isRefreshing = true) }
-            loadData()
-            _uiState.update { it.copy(isRefreshing = false) }
+            try {
+                repository.refreshFromCloud()
+                _uiState.update { it.copy(isRefreshing = false, error = null) }
+            } catch (e: Exception) {
+                _uiState.update {
+                    it.copy(isRefreshing = false, actionMessage = e.message ?: "Could not refresh")
+                }
+            }
         }
     }
 
@@ -131,14 +139,26 @@ class ExpiryViewModel @Inject constructor(
     /** Permanently delete a trashed item from the database. */
     fun deleteForever(item: ExpiryItem) {
         viewModelScope.launch {
-            repository.delete(item)
+            try {
+                repository.delete(item)
+            } catch (e: Exception) {
+                _uiState.update { it.copy(actionMessage = e.message ?: "Could not delete") }
+                return@launch
+            }
             _trashedIds.update { current -> (current - item.id).also { persistTrashed(it) } }
         }
     }
 
     fun deleteItem(item: ExpiryItem) {
         viewModelScope.launch {
-            repository.delete(item)
+            try {
+                repository.delete(item)
+            } catch (e: Exception) {
+                // The delete goes to the server first, so a failure means the
+                // item is still there — leave the UI showing it.
+                _uiState.update { it.copy(actionMessage = e.message ?: "Could not delete") }
+                return@launch
+            }
             // Update selected group if it was showing this item
             _uiState.update { state ->
                 val updatedGroup = state.selectedGroup?.let { group ->
@@ -259,14 +279,28 @@ class ExpiryViewModel @Inject constructor(
                 } else {
                     repository.insert(item)
                 }
-                _formState.update { it.copy(isSaving = false, saveSuccess = true) }
+                _formState.update { it.copy(isSaving = false, saveSuccess = true, saveError = null) }
             } catch (e: Exception) {
-                _formState.update { it.copy(isSaving = false) }
+                // Saves are cloud-first: nothing was written anywhere, so the
+                // form stays put and says why instead of pretending it saved.
+                _formState.update {
+                    it.copy(isSaving = false, saveError = e.message ?: "Could not save. Try again.")
+                }
             }
         }
     }
 
     fun resetSaveSuccess() {
         _formState.update { it.copy(saveSuccess = false) }
+    }
+
+    /** Called once the save failure has been shown. */
+    fun clearSaveError() {
+        _formState.update { it.copy(saveError = null) }
+    }
+
+    /** Called once [ExpiryUiState.actionMessage] has been shown. */
+    fun clearActionMessage() {
+        _uiState.update { it.copy(actionMessage = null) }
     }
 }

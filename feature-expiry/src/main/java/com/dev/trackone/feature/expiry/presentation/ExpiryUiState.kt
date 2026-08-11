@@ -23,6 +23,8 @@ data class ExpiryUiState(
     /** IDs of items the user swiped to trash (soft-deleted; shown in the Expired tab). */
     val trashedIds: Set<Long> = emptySet(),
     val error: String? = null,
+    /** One-shot message for a failed write (delete), shown as a snackbar. */
+    val actionMessage: String? = null,
 )
 
 /**
@@ -47,4 +49,6 @@ data class ExpiryFormState(
     val expiryDateError: String? = null,
     val isSaving: Boolean = false,
     val saveSuccess: Boolean = false,
+    /** Why the last save failed — usually "no internet", since saves are cloud-first. */
+    val saveError: String? = null,
 )

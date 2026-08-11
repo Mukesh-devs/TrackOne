@@ -15,6 +15,8 @@ data class CredentialUiState(
     val searchQuery: String = "",
     val isSearchActive: Boolean = false,
     val error: String? = null,
+    /** One-shot message for a failed write (delete, favourite), shown as a snackbar. */
+    val actionMessage: String? = null,
 )
 
 /**
@@ -35,4 +37,6 @@ data class CredentialFormState(
     val passwordError: String? = null,
     val isSaving: Boolean = false,
     val saveSuccess: Boolean = false,
+    /** Why the last save failed — usually "no internet", since saves are cloud-first. */
+    val saveError: String? = null,
 )

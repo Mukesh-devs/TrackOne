@@ -127,9 +127,17 @@ class ExpenseViewModel @Inject constructor(
     }
 
     fun refresh() {
-        // Data is already live via [observePeriodData]; this only drives the
-        // pull-to-refresh indicator and re-centres on the current date.
+        // Re-centres on today and pulls straight from the API, bypassing the
+        // background-refresh throttle. [observePeriodData] picks the new rows up
+        // from Room, so there is nothing to re-subscribe here.
         _uiState.update { it.copy(currentDate = System.currentTimeMillis()) }
+        viewModelScope.launch {
+            try {
+                repository.refreshFromCloud()
+            } catch (e: Exception) {
+                _uiState.update { it.copy(actionMessage = e.message ?: "Could not refresh") }
+            }
+        }
     }
 
     fun selectItem(item: ExpenseItem) {
@@ -176,8 +184,19 @@ class ExpenseViewModel @Inject constructor(
 
     fun deleteItem(item: ExpenseItem) {
         viewModelScope.launch {
-            repository.delete(item)
+            try {
+                repository.delete(item)
+            } catch (e: Exception) {
+                // The delete goes to the server first, so a failure means the
+                // transaction is still there — leave the UI showing it.
+                _uiState.update { it.copy(actionMessage = e.message ?: "Could not delete") }
+            }
         }
+    }
+
+    /** Called once [ExpenseUiState.actionMessage] has been shown. */
+    fun clearActionMessage() {
+        _uiState.update { it.copy(actionMessage = null) }
     }
 
     // ========== Statistics ==========
@@ -331,14 +350,23 @@ class ExpenseViewModel @Inject constructor(
                 } else {
                     repository.insert(item)
                 }
-                _formState.update { it.copy(isSaving = false, saveSuccess = true) }
+                _formState.update { it.copy(isSaving = false, saveSuccess = true, saveError = null) }
             } catch (e: Exception) {
-                _formState.update { it.copy(isSaving = false) }
+                // Saves are cloud-first: nothing was written anywhere, so the
+                // form stays put and says why instead of pretending it saved.
+                _formState.update {
+                    it.copy(isSaving = false, saveError = e.message ?: "Could not save. Try again.")
+                }
             }
         }
     }
 
     fun resetSaveSuccess() {
         _formState.update { it.copy(saveSuccess = false) }
+    }
+
+    /** Called once the save failure has been shown. */
+    fun clearSaveError() {
+        _formState.update { it.copy(saveError = null) }
     }
 }

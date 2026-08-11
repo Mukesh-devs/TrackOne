@@ -28,7 +28,8 @@ import com.google.android.gms.auth.api.signin.GoogleSignInAccount
 class MainViewModel @Inject constructor(
     moduleEntries: Set<@JvmSuppressWildcards ModuleEntry>,
     private val userPreferencesRepository: UserPreferencesRepository,
-    private val syncManager: SyncManager
+    private val syncManager: SyncManager,
+    private val cloudAccountManager: com.dev.trackone.cloud.CloudAccountManager,
 ) : ViewModel() {
 
     /**
@@ -173,7 +174,19 @@ class MainViewModel @Inject constructor(
             if (result.isSuccess) {
                 val now = System.currentTimeMillis()
                 userPreferencesRepository.setLastBackupTimestamp(now)
-                _syncUiState.value = SyncUiState.Success("Restore successful!", newSignedIn)
+                // A Drive restore writes straight to Room. Since the API is now
+                // the source of truth, push the restored rows up as well —
+                // otherwise the next background refresh would wipe them.
+                val pushed = cloudAccountManager.pushLocalDatabaseToCloud()
+                _syncUiState.value = if (pushed.isSuccess) {
+                    SyncUiState.Success("Restore successful!", newSignedIn)
+                } else {
+                    SyncUiState.Error(
+                        "Restored on this device, but syncing it to the cloud failed. " +
+                            "Reconnect and restore again.",
+                        newSignedIn,
+                    )
+                }
             } else {
                 _syncUiState.value = SyncUiState.Error(result.exceptionOrNull()?.message ?: "Restore failed", newSignedIn)
             }

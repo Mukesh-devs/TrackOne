@@ -111,17 +111,21 @@ class MainActivity : FragmentActivity() {
                             isAuthenticated = isAuthenticated,
                             onUnlocked = { isAuthenticated = true }
                         ) {
-                            TrackOneApp(
-                                viewModel = viewModel,
-                                onSignInClick = {
-                                    signInLauncher.launch(googleAuthHelper.getSignInIntent())
-                                },
-                                onSignOutClick = {
-                                    googleAuthHelper.signOut {
-                                        viewModel.onSignOut()
+                            // Data now lives in the cloud, so there is an account
+                            // to sign into before there is anything to show.
+                            com.dev.trackone.ui.cloud.CloudAccountGate {
+                                TrackOneApp(
+                                    viewModel = viewModel,
+                                    onSignInClick = {
+                                        signInLauncher.launch(googleAuthHelper.getSignInIntent())
+                                    },
+                                    onSignOutClick = {
+                                        googleAuthHelper.signOut {
+                                            viewModel.onSignOut()
+                                        }
                                     }
-                                }
-                            )
+                                )
+                            }
                         }
                     }
                 }

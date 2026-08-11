@@ -9,6 +9,7 @@ import androidx.compose.material.icons.filled.Fingerprint
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.rememberCoroutineScope
@@ -69,8 +70,23 @@ fun SettingsScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
+                // Scrollable now that Settings has three sections — on a short
+                // screen the last one used to be unreachable.
+                .verticalScroll(androidx.compose.foundation.rememberScrollState())
                 .padding(16.dp)
         ) {
+            Text(
+                text = "Cloud account",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(bottom = 16.dp)
+            )
+
+            com.dev.trackone.ui.cloud.CloudAccountSettingsCard()
+
+            Spacer(modifier = Modifier.height(32.dp))
+
             Text(
                 text = "Security",
                 style = MaterialTheme.typography.titleMedium,

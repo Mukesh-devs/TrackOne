@@ -30,6 +30,7 @@ include(":app")
 include(":core:common")
 include(":core:database")
 include(":core:navigation")
+include(":core:network")
 include(":core:ui")
 
 // Feature modules

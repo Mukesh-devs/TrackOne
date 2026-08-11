@@ -5,6 +5,7 @@ import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Transaction
 import androidx.room.Update
 import kotlinx.coroutines.flow.Flow
 
@@ -40,6 +41,16 @@ interface CredentialDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAll(entities: List<CredentialEntity>)
+
+    /**
+     * Swaps the cache for the server's copy in a single transaction, so a
+     * collector never observes the momentarily-empty table in between.
+     */
+    @Transaction
+    suspend fun replaceAll(entities: List<CredentialEntity>) {
+        deleteAll()
+        insertAll(entities)
+    }
 
     @Query("SELECT * FROM credential_items ORDER BY title ASC")
     fun getAll(): Flow<List<CredentialEntity>>

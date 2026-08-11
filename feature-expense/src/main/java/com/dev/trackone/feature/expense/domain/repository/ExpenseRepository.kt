@@ -31,4 +31,11 @@ interface ExpenseRepository {
     suspend fun delete(item: ExpenseItem)
 
     suspend fun deleteById(id: Long)
+
+    /**
+     * Forces an immediate pull from the API, bypassing the background-refresh
+     * throttle. Drives pull-to-refresh; throws if the network is unavailable so
+     * the gesture can report failure instead of spinning silently.
+     */
+    suspend fun refreshFromCloud()
 }

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Debug-only: allows plain HTTP so the app can talk to `wrangler dev` on
+  http://10.0.2.2:8787 (the emulator's view of the host machine). Release builds
+  keep Android's default HTTPS-only policy.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <application
+        android:usesCleartextTraffic="true"
+        tools:targetApi="36" />
+
+</manifest>

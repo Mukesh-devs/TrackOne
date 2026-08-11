@@ -35,4 +35,11 @@ interface ExpiryRepository {
     suspend fun deleteById(id: Long)
 
     fun countExpiringBetween(dayStart: Long, dayEnd: Long): Flow<Int>
+
+    /**
+     * Forces an immediate pull from the API, bypassing the background-refresh
+     * throttle. Drives pull-to-refresh; throws if the network is unavailable so
+     * the gesture can report failure instead of spinning silently.
+     */
+    suspend fun refreshFromCloud()
 }

@@ -97,10 +97,26 @@ fun ExpiryNavigation(
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
+    // Writes are cloud-first, so a failed save/delete means nothing changed
+    // anywhere. Surface it rather than letting the action look like it worked.
+    androidx.compose.runtime.LaunchedEffect(uiState.actionMessage) {
+        uiState.actionMessage?.let {
+            snackbarHostState.showSnackbar(it)
+            viewModel.clearActionMessage()
+        }
+    }
+    androidx.compose.runtime.LaunchedEffect(formState.saveError) {
+        formState.saveError?.let {
+            snackbarHostState.showSnackbar(it)
+            viewModel.clearSaveError()
+        }
+    }
+
     Surface(
         modifier = modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.background,
     ) {
+      Box(modifier = Modifier.fillMaxSize()) {
         NavHost(
             navController = navController,
             startDestination = ExpiryRoutes.MAIN,
@@ -193,15 +209,6 @@ fun ExpiryNavigation(
                         },
                         modifier = Modifier.align(Alignment.BottomCenter),
                     )
-
-                    // Sits above the floating nav so it is never covered.
-                    SnackbarHost(
-                        hostState = snackbarHostState,
-                        modifier = Modifier
-                            .align(Alignment.BottomCenter)
-                            .navigationBarsPadding()
-                            .padding(bottom = 96.dp),
-                    )
                 }
             }
 
@@ -249,6 +256,18 @@ fun ExpiryNavigation(
                 }
             }
         }
+
+        // Hoisted out of the NavHost so a failed save on the Edit screen (or a
+        // failed delete on Detail) still has somewhere to show. Padded to sit
+        // above the floating nav on the main screen.
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .navigationBarsPadding()
+                .padding(bottom = 96.dp),
+        )
+      }
     }
 }
 

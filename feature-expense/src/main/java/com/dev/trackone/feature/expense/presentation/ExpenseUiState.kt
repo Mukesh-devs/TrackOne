@@ -39,6 +39,8 @@ data class ExpenseUiState(
     val statsItems: List<ExpenseItem> = emptyList(),
     val statsTotalIncome: Double = 0.0,
     val statsTotalExpense: Double = 0.0,
+    /** One-shot message for a failed write (delete), shown as a snackbar. */
+    val actionMessage: String? = null,
 )
 
 /**
@@ -61,4 +63,6 @@ data class ExpenseFormState(
     val dateError: String? = null,
     val isSaving: Boolean = false,
     val saveSuccess: Boolean = false,
+    /** Why the last save failed — usually "no internet", since saves are cloud-first. */
+    val saveError: String? = null,
 )

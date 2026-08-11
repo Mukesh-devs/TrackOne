@@ -97,21 +97,49 @@ class CredentialViewModel @Inject constructor(
 
     // ========== CRUD ==========
 
-    /** Data is Flow-backed and always live; this only drives the pull indicator. */
+    /**
+     * Pulls straight from the API, bypassing the background-refresh throttle.
+     * The pipeline in [observeData] picks the new rows up from Room.
+     */
     fun refresh() {
-        _uiState.update { it.copy(isRefreshing = false) }
+        viewModelScope.launch {
+            _uiState.update { it.copy(isRefreshing = true) }
+            try {
+                repository.refreshFromCloud()
+                _uiState.update { it.copy(isRefreshing = false) }
+            } catch (e: Exception) {
+                _uiState.update {
+                    it.copy(isRefreshing = false, actionMessage = e.message ?: "Could not refresh")
+                }
+            }
+        }
     }
 
     fun toggleFavorite(item: CredentialItem) {
         viewModelScope.launch {
-            repository.update(item.copy(isFavorite = !item.isFavorite))
+            try {
+                repository.update(item.copy(isFavorite = !item.isFavorite))
+            } catch (e: Exception) {
+                _uiState.update { it.copy(actionMessage = e.message ?: "Could not update") }
+            }
         }
     }
 
     fun deleteItem(item: CredentialItem) {
         viewModelScope.launch {
-            repository.delete(item)
+            try {
+                repository.delete(item)
+            } catch (e: Exception) {
+                // The delete goes to the server first, so a failure means the
+                // credential is still there — leave the UI showing it.
+                _uiState.update { it.copy(actionMessage = e.message ?: "Could not delete") }
+            }
         }
+    }
+
+    /** Called once [CredentialUiState.actionMessage] has been shown. */
+    fun clearActionMessage() {
+        _uiState.update { it.copy(actionMessage = null) }
     }
 
     // ========== CSV export ==========
@@ -198,15 +226,25 @@ class CredentialViewModel @Inject constructor(
                     isFavorite = form.isFavorite,
                 )
                 if (form.isEditing) repository.update(item) else repository.insert(item)
-                _formState.update { it.copy(isSaving = false, saveSuccess = true) }
+                _formState.update { it.copy(isSaving = false, saveSuccess = true, saveError = null) }
             } catch (e: Exception) {
-                _formState.update { it.copy(isSaving = false, titleError = e.message ?: "Could not save") }
+                // Saves are cloud-first: nothing was written anywhere, so the
+                // form stays put and says why. (Not a titleError — the title is
+                // fine; it's the network that isn't.)
+                _formState.update {
+                    it.copy(isSaving = false, saveError = e.message ?: "Could not save. Try again.")
+                }
             }
         }
     }
 
     fun resetSaveSuccess() {
         _formState.update { it.copy(saveSuccess = false) }
+    }
+
+    /** Called once the save failure has been shown. */
+    fun clearSaveError() {
+        _formState.update { it.copy(saveError = null) }
     }
 }
 
