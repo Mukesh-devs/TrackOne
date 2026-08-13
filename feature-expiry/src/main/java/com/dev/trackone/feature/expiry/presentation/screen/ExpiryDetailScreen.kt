@@ -5,14 +5,16 @@ import android.content.ClipboardManager
 import android.content.Context
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -76,6 +78,7 @@ fun ExpiryDetailScreen(
     val context = LocalContext.current
     var showDeleteDialog by remember { mutableStateOf(false) }
     var passwordVisible by remember { mutableStateOf(false) }
+    val navigationBarInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
 
     val now = System.currentTimeMillis()
     val days = DateUtils.daysUntil(item.expiryDate)
@@ -91,13 +94,16 @@ fun ExpiryDetailScreen(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background),
     ) {
-        // Back arrow
+        // Back on the left, the item's actions on the right. They sit up here
+        // rather than in a bottom bar so the system navigation bar can never
+        // cover them, whichever gesture/button mode the device is in.
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .statusBarsPadding()
-                .padding(horizontal = 8.dp, vertical = 4.dp),
+                .padding(start = 8.dp, end = 16.dp, top = 4.dp, bottom = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             IconButton(onClick = onBack) {
                 Icon(
@@ -106,11 +112,35 @@ fun ExpiryDetailScreen(
                     tint = MaterialTheme.colorScheme.onBackground,
                 )
             }
+
+            Spacer(modifier = Modifier.weight(1f))
+
+            HeaderAction(
+                icon = Icons.Default.Edit,
+                description = "Edit",
+                container = MaterialTheme.colorScheme.primaryContainer,
+                content = MaterialTheme.colorScheme.onPrimaryContainer,
+                onClick = { onEdit(item) },
+            )
+            HeaderAction(
+                icon = Icons.Default.Delete,
+                description = "Delete",
+                container = MaterialTheme.colorScheme.errorContainer,
+                content = MaterialTheme.colorScheme.error,
+                onClick = { showDeleteDialog = true },
+            )
         }
 
         LazyColumn(
             modifier = Modifier.weight(1f),
-            contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp),
+            contentPadding = PaddingValues(
+                start = 20.dp,
+                end = 20.dp,
+                top = 8.dp,
+                // The list now runs to the bottom of the window, so it has to
+                // clear the navigation bar itself.
+                bottom = 24.dp + navigationBarInset,
+            ),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             item { HeroCard(item = item, days = days, expired = expired, accent = accent) }
@@ -195,31 +225,6 @@ fun ExpiryDetailScreen(
                     DetailRow("Last Updated", DateUtils.formatDate(item.updatedAt))
                 }
             }
-        }
-
-        // Bottom action bar
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 12.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            ActionButton(
-                text = "Edit",
-                icon = Icons.Default.Edit,
-                container = MaterialTheme.colorScheme.primaryContainer,
-                content = MaterialTheme.colorScheme.onPrimaryContainer,
-                modifier = Modifier.weight(1f),
-                onClick = { onEdit(item) },
-            )
-            ActionButton(
-                text = "Delete",
-                icon = Icons.Default.Delete,
-                container = MaterialTheme.colorScheme.errorContainer,
-                content = MaterialTheme.colorScheme.error,
-                modifier = Modifier.weight(1f),
-                onClick = { showDeleteDialog = true },
-            )
         }
     }
 
@@ -434,35 +439,27 @@ private fun CopyRow(label: String, value: String, onCopy: () -> Unit) {
     }
 }
 
+/** A tinted circular icon button for the header's Edit / Delete actions. */
 @Composable
-private fun ActionButton(
-    text: String,
+private fun HeaderAction(
     icon: ImageVector,
+    description: String,
     container: Color,
     content: Color,
-    modifier: Modifier = Modifier,
     onClick: () -> Unit,
 ) {
-    Surface(
+    IconButton(
         onClick = onClick,
-        modifier = modifier,
-        shape = RoundedCornerShape(16.dp),
-        color = container,
+        modifier = Modifier
+            .size(40.dp)
+            .background(container, CircleShape),
     ) {
-        Row(
-            modifier = Modifier.padding(vertical = 14.dp),
-            horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Icon(imageVector = icon, contentDescription = null, tint = content, modifier = Modifier.size(18.dp))
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                text = text,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = content,
-            )
-        }
+        Icon(
+            imageVector = icon,
+            contentDescription = description,
+            tint = content,
+            modifier = Modifier.size(20.dp),
+        )
     }
 }
 

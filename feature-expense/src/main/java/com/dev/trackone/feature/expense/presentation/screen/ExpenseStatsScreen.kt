@@ -2,6 +2,11 @@ package com.dev.trackone.feature.expense.presentation.screen
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -18,6 +23,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -33,21 +39,39 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.dev.trackone.core.common.util.CurrencyUtils
 import com.dev.trackone.feature.expense.domain.model.ExpenseCategory
+import com.dev.trackone.feature.expense.domain.model.ExpenseItem
+import com.dev.trackone.feature.expense.domain.model.PaymentMode
 import com.dev.trackone.feature.expense.presentation.ExpenseUiState
 import com.dev.trackone.feature.expense.presentation.TimePeriod
 
 private data class Slice(val label: String, val amount: Double, val fraction: Float, val color: Color)
+
+/**
+ * The two ways the same spend can be sliced. They share one card and one chart
+ * so both are a single tap apart — stacking a second chart underneath the first
+ * would bury payment modes below the fold.
+ */
+private enum class Breakdown(val label: String) {
+    CATEGORY("Category"),
+    PAYMENT_MODE("Payment Mode"),
+}
 
 @Composable
 fun ExpenseStatsScreen(
@@ -81,7 +105,8 @@ fun ExpenseStatsScreen(
         }
     }
 
-    val slices = remember(uiState.expenseItems) { buildSlices(uiState) }
+    val byCategory = remember(uiState.expenseItems) { categorySlices(uiState.expenseItems) }
+    val byPaymentMode = remember(uiState.expenseItems) { paymentModeSlices(uiState.expenseItems) }
     val totalExpense = uiState.totalExpense
 
     Column(
@@ -168,7 +193,7 @@ fun ExpenseStatsScreen(
             }
 
             item {
-                if (slices.isEmpty()) {
+                if (byCategory.isEmpty()) {
                     Surface(shape = RoundedCornerShape(20.dp), color = MaterialTheme.colorScheme.surface, tonalElevation = 1.dp, modifier = Modifier.fillMaxWidth()) {
                         Column(
                             modifier = Modifier.padding(32.dp).fillMaxWidth(),
@@ -180,7 +205,11 @@ fun ExpenseStatsScreen(
                         }
                     }
                 } else {
-                    PieChartCard(slices = slices, total = totalExpense)
+                    SpendingBreakdownCard(
+                        byCategory = byCategory,
+                        byPaymentMode = byPaymentMode,
+                        total = totalExpense,
+                    )
                 }
             }
         }
@@ -191,10 +220,22 @@ fun ExpenseStatsScreen(
     }
 }
 
-// ── Pie chart ─────────────────────────────────────────────────────────────────
+// ── Spending breakdown ────────────────────────────────────────────────────────
 
+/**
+ * One card, one chart, two ways to slice it. The toggle sits directly under the
+ * title so Category and Payment Mode are equally reachable, and the donut's
+ * centre keeps showing the same total either way — which is what makes the two
+ * views comparable at a glance rather than two separate charts to scroll past.
+ */
 @Composable
-private fun PieChartCard(slices: List<Slice>, total: Double) {
+private fun SpendingBreakdownCard(
+    byCategory: List<Slice>,
+    byPaymentMode: List<Slice>,
+    total: Double,
+) {
+    var breakdown by rememberSaveable { mutableStateOf(Breakdown.CATEGORY) }
+
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
@@ -204,37 +245,130 @@ private fun PieChartCard(slices: List<Slice>, total: Double) {
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
             Text(
-                text = "Spending by Category",
+                text = "Spending Breakdown",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface,
             )
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(14.dp))
 
-            Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                Canvas(modifier = Modifier.size(180.dp)) {
-                    var start = -90f
+            BreakdownToggle(selected = breakdown, onSelect = { breakdown = it })
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            AnimatedContent(
+                targetState = breakdown,
+                transitionSpec = { fadeIn(tween(180)) togetherWith fadeOut(tween(120)) },
+                label = "spending_breakdown",
+            ) { mode ->
+                val slices = when (mode) {
+                    Breakdown.CATEGORY -> byCategory
+                    Breakdown.PAYMENT_MODE -> byPaymentMode
+                }
+                Column {
+                    Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                        DonutChart(slices = slices)
+                        // Capped to the ring's inner diameter so a long total
+                        // ellipsizes instead of spilling over the arcs.
+                        Column(
+                            modifier = Modifier.widthIn(max = 128.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                        ) {
+                            Text(
+                                text = "Total Spent",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = CurrencyUtils.formatAmount(total),
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
                     slices.forEach { s ->
-                        val sweep = s.fraction * 360f
-                        drawArc(color = s.color, startAngle = start, sweepAngle = sweep, useCenter = true)
-                        start += sweep
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Box(modifier = Modifier.size(12.dp).clip(CircleShape).background(s.color))
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Text(s.label, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
+                            Text("${(s.fraction * 100).toInt()}%", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(end = 10.dp))
+                            Text(CurrencyUtils.formatAmount(s.amount), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
+                        }
                     }
                 }
             }
+        }
+    }
+}
 
-            Spacer(modifier = Modifier.height(16.dp))
-            slices.forEach { s ->
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically,
+@Composable
+private fun BreakdownToggle(selected: Breakdown, onSelect: (Breakdown) -> Unit) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+    ) {
+        Row(modifier = Modifier.fillMaxWidth().padding(4.dp)) {
+            Breakdown.entries.forEach { mode ->
+                val isSelected = mode == selected
+                Surface(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(10.dp))
+                        .clickable { onSelect(mode) },
+                    shape = RoundedCornerShape(10.dp),
+                    color = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent,
                 ) {
-                    Box(modifier = Modifier.size(12.dp).clip(CircleShape).background(s.color))
-                    Spacer(modifier = Modifier.width(10.dp))
-                    Text(s.label, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
-                    Text("${(s.fraction * 100).toInt()}%", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(end = 10.dp))
-                    Text(CurrencyUtils.formatAmount(s.amount), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
+                    Text(
+                        text = mode.label,
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                        color = if (isSelected) {
+                            MaterialTheme.colorScheme.onPrimary
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        },
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
+                    )
                 }
             }
+        }
+    }
+}
+
+/**
+ * Ring rather than a filled pie: it leaves the middle free for the total, and
+ * the hairline gap between arcs keeps two similarly-coloured neighbours apart.
+ */
+@Composable
+private fun DonutChart(slices: List<Slice>, modifier: Modifier = Modifier) {
+    Canvas(modifier = modifier.size(200.dp)) {
+        val stroke = 30.dp.toPx()
+        val gap = if (slices.size > 1) 1.5f else 0f
+        var start = -90f
+        slices.forEach { s ->
+            val sweep = s.fraction * 360f
+            drawArc(
+                color = s.color,
+                startAngle = start,
+                sweepAngle = (sweep - gap).coerceAtLeast(0.6f),
+                useCenter = false,
+                topLeft = Offset(stroke / 2f, stroke / 2f),
+                size = Size(size.width - stroke, size.height - stroke),
+                style = Stroke(width = stroke),
+            )
+            start += sweep
         }
     }
 }
@@ -274,16 +408,28 @@ private fun InsightRow(label: String, amount: Double, accent: Color) {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-private fun buildSlices(uiState: ExpenseUiState): List<Slice> {
-    val byCat = uiState.expenseItems
-        .groupBy { it.category }
+private fun categorySlices(items: List<ExpenseItem>): List<Slice> =
+    slicesOf(items, { it.category }, { it.displayName }, ::categoryColor)
+
+private fun paymentModeSlices(items: List<ExpenseItem>): List<Slice> =
+    slicesOf(items, { it.paymentMode }, { it.displayName }, ::paymentModeColor)
+
+/** Groups spend by [keyOf] and turns each group into a share of the total. */
+private fun <K> slicesOf(
+    items: List<ExpenseItem>,
+    keyOf: (ExpenseItem) -> K,
+    labelOf: (K) -> String,
+    colorOf: (K) -> Color,
+): List<Slice> {
+    val totals = items
+        .groupBy(keyOf)
         .mapValues { entry -> entry.value.sumOf { it.amount } }
         .filter { it.value > 0.0 }
-    val total = byCat.values.sum()
+    val total = totals.values.sum()
     if (total <= 0.0) return emptyList()
-    return byCat.entries
+    return totals.entries
         .sortedByDescending { it.value }
-        .map { Slice(it.key.displayName, it.value, (it.value / total).toFloat(), categoryColor(it.key)) }
+        .map { Slice(labelOf(it.key), it.value, (it.value / total).toFloat(), colorOf(it.key)) }
 }
 
 private fun categoryColor(c: ExpenseCategory): Color = when (c) {
@@ -300,4 +446,13 @@ private fun categoryColor(c: ExpenseCategory): Color = when (c) {
     ExpenseCategory.INSURANCE -> Color(0xFF546E7A)
     ExpenseCategory.SAVINGS -> Color(0xFF00695C)
     else -> Color(0xFF9E9E9E)
+}
+
+private fun paymentModeColor(m: PaymentMode): Color = when (m) {
+    PaymentMode.CREDIT_CARD -> Color(0xFF5E35B1)
+    PaymentMode.DEBIT_CARD -> Color(0xFF1E88E5)
+    PaymentMode.UPI -> Color(0xFF00897B)
+    PaymentMode.CASH -> Color(0xFF43A047)
+    PaymentMode.NET_BANKING -> Color(0xFFF4511E)
+    PaymentMode.OTHERS -> Color(0xFF9E9E9E)
 }
