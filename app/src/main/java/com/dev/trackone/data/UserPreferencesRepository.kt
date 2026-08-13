@@ -7,7 +7,6 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.stringPreferencesKey
-import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
@@ -26,7 +25,6 @@ private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(
 data class UserPreferences(
     val hasSeenOnboarding: Boolean,
     val hasSeenTour: Boolean,
-    val lastBackupTimestamp: Long = 0L,
     val isAppLockEnabled: Boolean = false,
     val hashedPin: String? = null
 )
@@ -39,7 +37,6 @@ class UserPreferencesRepository @Inject constructor(
     private object PreferencesKeys {
         val HAS_SEEN_ONBOARDING = booleanPreferencesKey("has_seen_onboarding")
         val HAS_SEEN_TOUR = booleanPreferencesKey("has_seen_tour")
-        val LAST_BACKUP_TIMESTAMP = longPreferencesKey("last_backup_timestamp")
         val IS_APP_LOCK_ENABLED = booleanPreferencesKey("is_app_lock_enabled")
         val HASHED_PIN = stringPreferencesKey("hashed_pin")
     }
@@ -54,10 +51,9 @@ class UserPreferencesRepository @Inject constructor(
         }.map { preferences ->
             val hasSeenOnboarding = preferences[PreferencesKeys.HAS_SEEN_ONBOARDING] ?: false
             val hasSeenTour = preferences[PreferencesKeys.HAS_SEEN_TOUR] ?: false
-            val lastBackupTimestamp = preferences[PreferencesKeys.LAST_BACKUP_TIMESTAMP] ?: 0L
             val isAppLockEnabled = preferences[PreferencesKeys.IS_APP_LOCK_ENABLED] ?: false
             val hashedPin = preferences[PreferencesKeys.HASHED_PIN]
-            UserPreferences(hasSeenOnboarding, hasSeenTour, lastBackupTimestamp, isAppLockEnabled, hashedPin)
+            UserPreferences(hasSeenOnboarding, hasSeenTour, isAppLockEnabled, hashedPin)
         }
 
     suspend fun completeOnboarding() {
@@ -69,12 +65,6 @@ class UserPreferencesRepository @Inject constructor(
     suspend fun completeTour() {
         context.dataStore.edit { preferences ->
             preferences[PreferencesKeys.HAS_SEEN_TOUR] = true
-        }
-    }
-
-    suspend fun setLastBackupTimestamp(timestamp: Long) {
-        context.dataStore.edit { preferences ->
-            preferences[PreferencesKeys.LAST_BACKUP_TIMESTAMP] = timestamp
         }
     }
 

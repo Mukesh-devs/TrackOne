@@ -7,8 +7,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Fingerprint
 import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.CloudUpload
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -34,7 +32,6 @@ import androidx.compose.ui.graphics.Color
 @Composable
 fun SettingsScreen(
     onNavigateBack: () -> Unit,
-    onNavigateToBackup: () -> Unit,
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
     val isAppLockEnabled by viewModel.isAppLockEnabled.collectAsStateWithLifecycle()
@@ -70,8 +67,8 @@ fun SettingsScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                // Scrollable now that Settings has three sections — on a short
-                // screen the last one used to be unreachable.
+                // Scrollable: on a short screen the last section would otherwise
+                // be unreachable.
                 .verticalScroll(androidx.compose.foundation.rememberScrollState())
                 .padding(16.dp)
         ) {
@@ -150,51 +147,6 @@ fun SettingsScreen(
                     }
                 }
                 
-            Spacer(modifier = Modifier.height(32.dp))
-            
-            Text(
-                text = "Data & Sync",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurface,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(bottom = 16.dp)
-            )
-
-            Surface(
-                shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
-                color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { onNavigateToBackup() }
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.CloudUpload,
-                        contentDescription = "Backup",
-                        tint = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.size(32.dp)
-                    )
-                    Spacer(modifier = Modifier.width(16.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "Backup & Restore",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            text = "Backup your data to Google Drive",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-            }
             }
 
             if (showPinSetupDialog) {

@@ -16,12 +16,6 @@ import com.dev.trackone.ui.TrackOneApp
 import com.dev.trackone.ui.onboarding.OnboardingScreen
 import dagger.hilt.android.AndroidEntryPoint
 
-import android.app.Activity
-import androidx.activity.result.contract.ActivityResultContracts
-import com.dev.trackone.sync.GoogleAuthHelper
-import com.google.android.gms.auth.api.signin.GoogleSignIn
-import javax.inject.Inject
-
 import androidx.fragment.app.FragmentActivity
 
 /**
@@ -32,22 +26,6 @@ import androidx.fragment.app.FragmentActivity
 class MainActivity : FragmentActivity() {
 
     private val viewModel: MainViewModel by viewModels()
-    
-    @Inject
-    lateinit var googleAuthHelper: GoogleAuthHelper
-
-    private val signInLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-        if (result.resultCode == Activity.RESULT_OK) {
-            val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
-            task.addOnSuccessListener { account ->
-                viewModel.onSignedIn(account)
-            }.addOnFailureListener {
-                viewModel.resetSyncState()
-            }
-        } else {
-            viewModel.resetSyncState()
-        }
-    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         val splashScreen = installSplashScreen()
@@ -67,12 +45,6 @@ class MainActivity : FragmentActivity() {
         //                   WindowManager.LayoutParams.FLAG_SECURE)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             setRecentsScreenshotEnabled(false)
-        }
-
-
-        // Restore existing sign-in if available
-        googleAuthHelper.getSignedInAccount()?.let { account ->
-            viewModel.onSignedIn(account)
         }
 
         setContent {
@@ -114,17 +86,7 @@ class MainActivity : FragmentActivity() {
                             // Data now lives in the cloud, so there is an account
                             // to sign into before there is anything to show.
                             com.dev.trackone.ui.cloud.CloudAccountGate {
-                                TrackOneApp(
-                                    viewModel = viewModel,
-                                    onSignInClick = {
-                                        signInLauncher.launch(googleAuthHelper.getSignInIntent())
-                                    },
-                                    onSignOutClick = {
-                                        googleAuthHelper.signOut {
-                                            viewModel.onSignOut()
-                                        }
-                                    }
-                                )
+                                TrackOneApp(viewModel = viewModel)
                             }
                         }
                     }

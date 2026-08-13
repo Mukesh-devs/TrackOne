@@ -49,36 +49,64 @@ Never hardcoded. Resolution order:
 2. `gradle.properties` / `-Ptrackone.api.baseUrl=…`
 3. `http://10.0.2.2:8787/` — the emulator's view of `wrangler dev` on the host
 
-That value is only the **seed** compiled into `BuildConfig.DEFAULT_API_BASE_URL`.
-At runtime it lives in `ApiConfigStore` (SharedPreferences) and is editable from
-**Settings → Cloud account → Server**, so moving the Worker to a new domain needs
-neither a code change nor a rebuild. `BaseUrlInterceptor` rewrites the origin of
-every request from that value; Retrofit is built with a placeholder base that is
-never contacted.
+That value is compiled into `BuildConfig.DEFAULT_API_BASE_URL` and held at
+runtime by `ApiConfigStore`. `BaseUrlInterceptor` rewrites the origin of every
+request from it; Retrofit is built with a placeholder base that is never
+contacted.
 
 Plain HTTP is allowed in debug builds only (`app/src/debug/AndroidManifest.xml`),
 so the emulator can reach `wrangler dev`. Release builds stay HTTPS-only.
 
 ## Accounts
 
-Every API call carries a 30-day bearer token from `/auth/signin`, stored in
+Every API call carries a **7-day** bearer token from `/auth/signin`, stored in
 `EncryptedSharedPreferences` (falling back to plain prefs if the device keystore
-is unavailable). `AuthInterceptor` skips the two endpoints that issue tokens —
-sending a stale one while signing in would get the sign-in itself rejected — and
-clears the token on any other `401`.
+is unavailable). The app reads the absolute `expiresAt` from the response, so
+the server can change the lifetime without a client release.
+
+`AuthInterceptor` skips the two endpoints that issue tokens — sending a stale
+one while signing in would get the sign-in itself rejected. Everywhere else a
+token is retired two ways, both ending with the sign-in screen:
+
+- **Past its expiry** — dropped *before* the request goes out. The `401` is a
+  foregone conclusion, and offline there would be no `401` at all, only an
+  `IOException`, which would strand the dead token indefinitely.
+- **A `401` came back** — server-side expiry, or `JWT_SECRET` rotated.
 
 Cached rows carry no account marker, so **signing out clears the local
 database**, and it is downloaded again on the next sign-in.
 
-Two data-safety measures live in `CloudAccountManager`:
+Three data-safety measures live in `CloudAccountManager`:
 
 - **First sign-in adopts pre-cloud data.** A database that predates the API would
   otherwise be wiped the moment the server answered with an empty list, so when
-  the account is empty and the device is not, the local rows are uploaded first.
-  A JSON snapshot (`filesDir/pre_cloud_backup.json`, same shape as the Drive
-  backup) is written beforehand either way.
-- **A Drive restore is pushed to the cloud.** That path writes straight to Room;
-  without the push, the next background refresh would wipe the restored rows.
+  the account is empty and the device is not, the local rows are uploaded first,
+  one `POST` per row. A JSON snapshot (`filesDir/pre_cloud_backup.json`) is
+  written beforehand either way. A row the server rejects is logged and skipped
+  rather than abandoning the rest of the adoption half-done.
+- **The cache records its owner.** A session that lapses instead of signing out
+  leaves the rows in place, so the owning user id is stored beside them and
+  checked on every sign-in; a mismatch clears the cache first. Without it the
+  next account would inherit those rows — and the adoption above would upload
+  them into that account.
+- **Reset-app signs out.** The "forgot PIN" escape hatch would otherwise be a way
+  *around* App Lock: wipe the local data, and the account simply downloads it
+  again with no PIN in the way.
+
+## Credential passwords
+
+`GET /credential-items` masks every password as `********` — there is no
+`reveal` switch. Only `GET /credential-items/{id}` returns the real value, so
+`CredentialRepositoryImpl.hydratePasswords` fetches it one row at a time before
+anything reaches Room. A cache full of asterisks would be worse than no cache.
+
+Rows whose server `updatedAt` still matches the cached copy keep the password
+already on the device, so the routine background refresh costs **zero** extra
+requests and only new or edited rows pay for a call. A cached mask never counts
+as reusable, which heals rows written by a build that still trusted `reveal`.
+
+A failure mid-hydration propagates instead of falling back to the mask: keeping
+the previous cache always beats replacing a working password with asterisks.
 
 ## Adding an endpoint
 

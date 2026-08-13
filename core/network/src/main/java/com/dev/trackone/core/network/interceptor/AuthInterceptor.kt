@@ -11,9 +11,15 @@ import javax.inject.Singleton
  * one — sending a stale token while signing in would get the sign-in itself
  * rejected.
  *
- * A `401` anywhere else means the stored token is no longer good (expired, or
- * `JWT_SECRET` was rotated server-side), so it is cleared here; the auth state
- * observers then send the user back to the sign-in screen.
+ * Two things retire a token, and both end the same way: [AuthTokenStore.session]
+ * goes null, and the auth-state observers put the user back on the sign-in
+ * screen.
+ *
+ * - **It has passed its expiry.** Dropped before the request goes out, since
+ *   the answer is a foregone `401` — and offline there would be no answer at
+ *   all, only an `IOException`, which would leave the dead token in place.
+ * - **A `401` came back anyway.** Server-side expiry, or `JWT_SECRET` rotated
+ *   under us.
  */
 @Singleton
 class AuthInterceptor @Inject constructor(
@@ -25,6 +31,8 @@ class AuthInterceptor @Inject constructor(
         val isAuthEndpoint = request.url.encodedPath.let {
             it.endsWith("/auth/signup") || it.endsWith("/auth/signin")
         }
+
+        if (!isAuthEndpoint) tokenStore.clearIfExpired()
 
         val token = tokenStore.currentToken
         val outgoing = if (isAuthEndpoint || token == null) {

@@ -10,9 +10,7 @@ import com.dev.trackone.core.network.model.ExpenseItemRequest
 import com.dev.trackone.core.network.model.ExpiryItemDto
 import com.dev.trackone.core.network.model.ExpiryItemRequest
 import com.dev.trackone.core.network.model.FavoriteRequest
-import com.dev.trackone.core.network.model.RestoreResultDto
 import com.dev.trackone.core.network.model.SessionDto
-import okhttp3.RequestBody
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.DELETE
@@ -93,17 +91,21 @@ interface TrackOneApi {
     // ------------------------------------------------------ credential
 
     /**
-     * List responses mask passwords unless `reveal=true`; the local cache is
-     * useless without the real value, so the repository always asks for it.
+     * List responses always mask the password as `********` — there is no
+     * `reveal` switch. The real value comes from [getCredentialItem], one row at
+     * a time.
      */
     @GET("api/v1/credential-items")
     suspend fun getCredentialItems(
         @Query("limit") limit: Int,
         @Query("offset") offset: Int,
-        @Query("reveal") reveal: Boolean = true,
         @Query("sort") sort: String = "title",
         @Query("order") order: String = "asc",
     ): ApiEnvelope<List<CredentialItemDto>>
+
+    /** The only endpoint that returns an unmasked password. */
+    @GET("api/v1/credential-items/{id}")
+    suspend fun getCredentialItem(@Path("id") id: Long): ApiEnvelope<CredentialItemDto>
 
     @POST("api/v1/credential-items")
     suspend fun createCredentialItem(
@@ -124,22 +126,4 @@ interface TrackOneApi {
 
     @DELETE("api/v1/credential-items/{id}")
     suspend fun deleteCredentialItem(@Path("id") id: Long): Response<Unit>
-
-    // ------------------------------------------------------------ sync
-
-    /**
-     * Imports a whole-database backup into the caller's account.
-     *
-     * The body is passed as an opaque JSON string because the app already
-     * produces exactly this shape in `BackupDataSerializer` — round-tripping it
-     * through DTOs would only risk drift between the two serialisers.
-     *
-     * `mode=replace` clears the account first (matching the Drive restore's
-     * semantics); `mode=merge` upserts by id.
-     */
-    @POST("api/v1/sync/restore")
-    suspend fun restoreBackup(
-        @Query("mode") mode: String,
-        @Body payload: RequestBody,
-    ): ApiEnvelope<RestoreResultDto>
 }

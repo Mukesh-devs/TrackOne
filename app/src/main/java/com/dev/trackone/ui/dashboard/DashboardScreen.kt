@@ -31,10 +31,6 @@ import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.VpnKey
-import androidx.compose.material.icons.outlined.Cloud
-import androidx.compose.material.icons.outlined.CloudDone
-import androidx.compose.material.icons.outlined.CloudOff
-import androidx.compose.material.icons.outlined.CloudUpload
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -71,9 +67,6 @@ fun DashboardScreen(
     todayExpenseTotal: Double,
     credentialCount: Int,
     onMenuClick: () -> Unit,
-    onCloudClick: () -> Unit,
-    isBackupPending: Boolean?,
-    isSignedIn: Boolean,
     onExpiryClick: () -> Unit,
     onExpenseClick: () -> Unit,
     onCredentialClick: () -> Unit,
@@ -90,14 +83,7 @@ fun DashboardScreen(
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(bottom = Dimens.SpacingXxl),
         ) {
-            item {
-                TopBar(
-                    onMenuClick = onMenuClick,
-                    onCloudClick = onCloudClick,
-                    isBackupPending = isBackupPending,
-                    isSignedIn = isSignedIn,
-                )
-            }
+            item { TopBar(onMenuClick = onMenuClick) }
 
             item { GreetingSection(userName = userName) }
 
@@ -182,18 +168,13 @@ fun DashboardScreen(
 // ─── Top bar ────────────────────────────────────────────────────────────────────
 
 @Composable
-private fun TopBar(
-    onMenuClick: () -> Unit,
-    onCloudClick: () -> Unit,
-    isBackupPending: Boolean?,
-    isSignedIn: Boolean,
-) {
+private fun TopBar(onMenuClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .statusBarsPadding()
             .padding(horizontal = Dimens.SpacingSm, vertical = Dimens.SpacingSm),
-        horizontalArrangement = Arrangement.SpaceBetween,
+        horizontalArrangement = Arrangement.Start,
         verticalAlignment = Alignment.CenterVertically,
     ) {
         IconButton(onClick = onMenuClick) {
@@ -201,37 +182,6 @@ private fun TopBar(
                 imageVector = Icons.Default.Menu,
                 contentDescription = "Open menu",
                 tint = MaterialTheme.colorScheme.onBackground,
-            )
-        }
-
-        val (cloudIcon, cloudLabel, cloudTint) = when {
-            !isSignedIn -> Triple(
-                Icons.Outlined.CloudOff,
-                "Cloud backup — not signed in",
-                MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            isBackupPending == true -> Triple(
-                Icons.Outlined.CloudUpload,
-                "Cloud backup — changes pending",
-                WarningAmber,
-            )
-            isBackupPending == false -> Triple(
-                Icons.Outlined.CloudDone,
-                "Cloud backup — up to date",
-                ActiveGreen,
-            )
-            else -> Triple(
-                Icons.Outlined.Cloud,
-                "Cloud backup",
-                MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        IconButton(onClick = onCloudClick) {
-            Icon(
-                imageVector = cloudIcon,
-                // Conveys sync state to screen readers, not just colour.
-                contentDescription = cloudLabel,
-                tint = cloudTint,
             )
         }
     }

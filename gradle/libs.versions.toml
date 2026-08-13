@@ -92,12 +92,6 @@ junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
 
-# Google Drive and Auth
-play-services-auth = { group = "com.google.android.gms", name = "play-services-auth", version = "21.3.0" }
-google-api-client-android = { group = "com.google.api-client", name = "google-api-client-android", version = "2.7.2" }
-google-api-services-drive = { group = "com.google.apis", name = "google-api-services-drive", version = "v3-rev20241206-2.0.0" }
-google-http-client-gson = { group = "com.google.http-client", name = "google-http-client-gson", version = "1.45.3" }
-
 # Gradle plugin artifacts — used only by the build-logic convention plugins
 # so they can configure AGP/Kotlin from Kotlin code.
 android-gradlePlugin = { group = "com.android.tools.build", name = "gradle", version.ref = "agp" }

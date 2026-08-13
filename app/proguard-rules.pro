@@ -49,38 +49,6 @@
 -dontwarn dagger.hilt.**
 
 # -----------------------------------------------------------------------------
-# Google API client / Drive / GSON  (heavy reflection — required)
-# -----------------------------------------------------------------------------
--keep class com.google.api.client.** { *; }
--keep class com.google.api.services.drive.** { *; }
--keep class com.google.api.services.drive.model.** { *; }
--keep class com.google.gson.** { *; }
-
-# @Key drives the Google HTTP client's JSON (de)serialisation by reflection.
--keepclassmembers class * {
-    @com.google.api.client.util.Key <fields>;
-}
--keepclasseswithmembers class * {
-    @com.google.api.client.util.Key <fields>;
-}
-
-# Play Services auth
--keep class com.google.android.gms.auth.** { *; }
--keep class com.google.android.gms.common.** { *; }
--dontwarn com.google.android.gms.**
-
-# The Google HTTP stack references optional Apache/JDK classes that are absent
-# on Android; silence them rather than failing the build.
--dontwarn com.google.api.client.**
--dontwarn com.google.common.**
--dontwarn org.apache.http.**
--dontwarn android.net.http.AndroidHttpClient
--dontwarn javax.naming.**
--dontwarn java.awt.**
--dontwarn org.joda.time.**
--dontwarn sun.misc.**
-
-# -----------------------------------------------------------------------------
 # AndroidX Biometric / DataStore / Compose
 # -----------------------------------------------------------------------------
 -keep class androidx.biometric.** { *; }
@@ -90,12 +58,12 @@
 # would be stripped, which is desirable in release.
 
 # -----------------------------------------------------------------------------
-# App models — kept so backup/restore JSON keeps working after obfuscation
+# App models — kept so the on-device JSON snapshot survives obfuscation
 # -----------------------------------------------------------------------------
 -keep class com.dev.trackone.**.domain.model.** { *; }
--keep class com.dev.trackone.sync.** { *; }
+-keep class com.dev.trackone.backup.** { *; }
 
-# Enum values are looked up by name in the backup format (ExpenseCategory,
+# Enum values are looked up by name in the snapshot format (ExpenseCategory,
 # PaymentMode) — do not let R8 rename or remove them.
 -keepclassmembers enum com.dev.trackone.** {
     public static **[] values();

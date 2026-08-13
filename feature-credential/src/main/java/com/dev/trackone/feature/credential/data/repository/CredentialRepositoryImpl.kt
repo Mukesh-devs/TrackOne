@@ -6,7 +6,10 @@ import com.dev.trackone.core.network.api.apiCall
 import com.dev.trackone.core.network.api.apiDelete
 import com.dev.trackone.core.network.api.cachedWithRemoteRefresh
 import com.dev.trackone.core.network.api.fetchAllPages
+import com.dev.trackone.core.network.model.CredentialItemDto
 import com.dev.trackone.feature.credential.data.local.CredentialDao
+import com.dev.trackone.feature.credential.data.local.CredentialEntity
+import com.dev.trackone.feature.credential.data.mapper.MASKED_PASSWORD
 import com.dev.trackone.feature.credential.data.mapper.toDomain
 import com.dev.trackone.feature.credential.data.mapper.toEntity
 import com.dev.trackone.feature.credential.data.mapper.toRequest
@@ -37,7 +40,35 @@ class CredentialRepositoryImpl @Inject constructor(
 
     private suspend fun pullFromCloud() {
         val remote = fetchAllPages { limit, offset -> api.getCredentialItems(limit, offset) }
-        dao.replaceAll(remote.map { it.toEntity() })
+        dao.replaceAll(hydratePasswords(remote))
+    }
+
+    /**
+     * Fills in the passwords the list endpoint masks.
+     *
+     * `GET /credential-items` always answers with [MASKED_PASSWORD]; only the
+     * per-item endpoint returns the real value, so it is fetched one row at a
+     * time. A row whose server `updatedAt` still matches the cached copy cannot
+     * have changed, so its password is reused — which is what keeps the routine
+     * background refresh at zero extra requests and makes only new or edited
+     * rows cost a call. A cached mask (written by an older build, back when the
+     * list endpoint honoured `reveal=true`) never counts as reusable, so those
+     * rows heal on the next refresh.
+     *
+     * A failure here propagates rather than falling back to the mask: leaving
+     * the previous cache in place is always better than replacing a working
+     * password with asterisks.
+     */
+    private suspend fun hydratePasswords(remote: List<CredentialItemDto>): List<CredentialEntity> {
+        if (remote.isEmpty()) return emptyList()
+        val cached = dao.getAllOnce().associateBy { it.id }
+        return remote.map { dto ->
+            val reusable = cached[dto.id]
+                ?.takeIf { it.updatedAt == dto.updatedAt && it.password != MASKED_PASSWORD }
+            dto.toEntity(
+                password = reusable?.password ?: apiCall { api.getCredentialItem(dto.id) }.password,
+            )
+        }
     }
 
     override fun getAll(): Flow<List<CredentialItem>> =
@@ -59,7 +90,7 @@ class CredentialRepositoryImpl @Inject constructor(
 
     override suspend fun insert(item: CredentialItem): Long {
         val created = apiCall { api.createCredentialItem(item.toRequest()) }
-        dao.insert(created.toEntity())
+        dao.insert(created.toEntity(password = created.unmaskedPassword(item.password)))
         refreshCoordinator.invalidate(CACHE_KEY)
         return created.id
     }
@@ -67,9 +98,18 @@ class CredentialRepositoryImpl @Inject constructor(
     override suspend fun update(item: CredentialItem) {
         val updated = apiCall { api.updateCredentialItem(item.id, item.toRequest()) }
         // insert (REPLACE), not update: the row may not be cached locally yet.
-        dao.insert(updated.toEntity())
+        dao.insert(updated.toEntity(password = updated.unmaskedPassword(item.password)))
         refreshCoordinator.invalidate(CACHE_KEY)
     }
+
+    /**
+     * Guards the write path against a masked echo. Create and update currently
+     * reply with the real password, but we just sent it, so there is no reason
+     * to depend on that — and caching `********` after a save would lock the
+     * user out of their own entry.
+     */
+    private fun CredentialItemDto.unmaskedPassword(sent: String): String =
+        if (password == MASKED_PASSWORD) sent else password
 
     override suspend fun delete(item: CredentialItem) = deleteById(item.id)
 

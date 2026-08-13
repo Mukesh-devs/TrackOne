@@ -2,6 +2,7 @@ package com.dev.trackone.cloud
 
 import android.content.Context
 import android.util.Log
+import com.dev.trackone.backup.LocalSnapshotSerializer
 import com.dev.trackone.core.network.api.RemoteRefreshCoordinator
 import com.dev.trackone.core.network.api.TrackOneApi
 import com.dev.trackone.core.network.api.apiCall
@@ -11,23 +12,22 @@ import com.dev.trackone.core.network.auth.AuthSession
 import com.dev.trackone.core.network.model.CredentialItemDto
 import com.dev.trackone.core.network.model.ExpenseItemDto
 import com.dev.trackone.core.network.model.ExpiryItemDto
-import com.dev.trackone.core.network.model.RestoreResultDto
 import com.dev.trackone.feature.credential.data.local.CredentialDao
+import com.dev.trackone.feature.credential.data.local.CredentialEntity
 import com.dev.trackone.feature.credential.data.mapper.toDomain as credentialToDomain
 import com.dev.trackone.feature.credential.data.mapper.toRequest as credentialToRequest
 import com.dev.trackone.feature.expense.data.local.ExpenseDao
+import com.dev.trackone.feature.expense.data.local.ExpenseEntity
 import com.dev.trackone.feature.expense.data.mapper.toDomain as expenseToDomain
 import com.dev.trackone.feature.expense.data.mapper.toRequest as expenseToRequest
 import com.dev.trackone.feature.expiry.data.local.ExpiryDao
+import com.dev.trackone.feature.expiry.data.local.ExpiryEntity
 import com.dev.trackone.feature.expiry.data.mapper.toDomain as expiryToDomain
 import com.dev.trackone.feature.expiry.data.mapper.toRequest as expiryToRequest
-import com.dev.trackone.sync.BackupDataSerializer
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.withContext
-import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.RequestBody.Companion.toRequestBody
 import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -36,7 +36,7 @@ import javax.inject.Singleton
  * Owns everything that has to happen *around* signing in and out, which the
  * network layer deliberately doesn't know about: the local Room cache.
  *
- * Two rules make the cloud-first model safe here:
+ * Three rules make the cloud-first model safe here:
  *
  * 1. **Signing out clears the cache.** Rows carry no account marker once they
  *    land on the device, so leaving them behind would show one account's data
@@ -46,6 +46,11 @@ import javax.inject.Singleton
  *    answered with an empty list. So when the account is empty and the device
  *    is not, the local rows are uploaded first — and a JSON snapshot is written
  *    to app storage beforehand either way, as a last resort.
+ * 3. **The cache remembers whose it is.** Signing out is not the only way a
+ *    session ends: a token that expires or is rejected is dropped where it is,
+ *    cache intact. Without rule 3 the next account to sign in would inherit
+ *    those rows — and rule 2 would then upload them into that account. So the
+ *    owning user id is stored beside the cache and checked on every sign-in.
  */
 @Singleton
 class CloudAccountManager @Inject constructor(
@@ -60,6 +65,20 @@ class CloudAccountManager @Inject constructor(
 
     val session: StateFlow<AuthSession?> = authRepository.session
 
+    /**
+     * Which account the cached rows belong to, or [NO_OWNER] when nothing has
+     * ever claimed them — a pre-cloud database, which rule 2 adopts rather than
+     * discards.
+     *
+     * Plain preferences: it is an account id, not a secret, and it has to
+     * outlive the encrypted token store being cleared.
+     */
+    private val cacheOwnerPrefs = context.getSharedPreferences(OWNER_PREFS, Context.MODE_PRIVATE)
+
+    private var cacheOwnerId: Long
+        get() = cacheOwnerPrefs.getLong(KEY_CACHE_OWNER, NO_OWNER)
+        set(value) = cacheOwnerPrefs.edit().putLong(KEY_CACHE_OWNER, value).apply()
+
     suspend fun signIn(email: String, password: String) {
         authRepository.signIn(email, password)
         onSessionEstablished()
@@ -73,6 +92,7 @@ class CloudAccountManager @Inject constructor(
     suspend fun signOut() {
         authRepository.clearSession()
         clearLocalCache()
+        cacheOwnerId = NO_OWNER
         refreshCoordinator.invalidateAll()
     }
 
@@ -86,40 +106,36 @@ class CloudAccountManager @Inject constructor(
         if (!valid && !authRepository.isSignedIn) {
             // The interceptor already cleared the token on the 401.
             clearLocalCache()
+            cacheOwnerId = NO_OWNER
+            return false
+        }
+        if (valid) {
+            // Backfill for a device that was already signed in before the cache
+            // started recording an owner. Claiming it here, while the session is
+            // known-good, is what stops the *next* account from inheriting it.
+            authRepository.session.value?.userId?.let { cacheOwnerId = it }
         }
         return valid
     }
 
-    /**
-     * Uploads the current local database to the account, replacing whatever is
-     * there.
-     *
-     * Needed after a Google Drive restore: that path writes straight to Room,
-     * and with the API as the source of truth the next background refresh would
-     * otherwise wipe the restored rows within seconds. Pushing them up first
-     * makes the restore stick.
-     */
-    suspend fun pushLocalDatabaseToCloud(): Result<Unit> = withContext(Dispatchers.IO) {
-        runCatching {
-            val json = BackupDataSerializer.toJson(
-                expiryDao.getAllOnce(),
-                expenseDao.getAllOnce(),
-                credentialDao.getAllOnce(),
-            )
-            apiCall<RestoreResultDto> {
-                api.restoreBackup(
-                    mode = "replace",
-                    payload = json.toRequestBody("application/json; charset=utf-8".toMediaType()),
-                )
-            }
-            refreshCoordinator.invalidateAll()
-        }
-    }
-
     private suspend fun onSessionEstablished() {
+        val userId = authRepository.session.value?.userId ?: NO_OWNER
+
+        // Rows left behind by a session that lapsed rather than signed out. They
+        // belong to someone else; drop them before anything reads them — or,
+        // via adoptPreCloudData, uploads them into this account.
+        val owner = cacheOwnerId
+        if (owner != NO_OWNER && owner != userId) {
+            clearLocalCache()
+        }
+        cacheOwnerId = userId
+
         refreshCoordinator.invalidateAll()
         runCatching { adoptPreCloudData() }
             .onFailure { Log.w(TAG, "Could not upload pre-existing local data", it) }
+        // Again after the upload: the rows created above came back with server
+        // ids, and the cache is still holding the local ones.
+        refreshCoordinator.invalidateAll()
     }
 
     private suspend fun clearLocalCache() = withContext(Dispatchers.IO) {
@@ -142,46 +158,70 @@ class CloudAccountManager @Inject constructor(
         // otherwise try to infer apiCall's T as Unit.
         if (expiry.isNotEmpty() && fetchAllPages { l, o -> api.getExpiryItems(l, o) }.isEmpty()) {
             expiry.forEach { row ->
-                apiCall<ExpiryItemDto> {
-                    api.createExpiryItem(row.expiryToDomain().expiryToRequest())
+                upload("expiry", row.id) {
+                    apiCall<ExpiryItemDto> {
+                        api.createExpiryItem(row.expiryToDomain().expiryToRequest())
+                    }
                 }
             }
         }
         if (expense.isNotEmpty() && fetchAllPages { l, o -> api.getExpenseItems(l, o) }.isEmpty()) {
             expense.forEach { row ->
-                apiCall<ExpenseItemDto> {
-                    api.createExpenseItem(row.expenseToDomain().expenseToRequest())
+                upload("expense", row.id) {
+                    apiCall<ExpenseItemDto> {
+                        api.createExpenseItem(row.expenseToDomain().expenseToRequest())
+                    }
                 }
             }
         }
         if (credential.isNotEmpty() && fetchAllPages { l, o -> api.getCredentialItems(l, o) }.isEmpty()) {
             credential.forEach { row ->
-                apiCall<CredentialItemDto> {
-                    api.createCredentialItem(row.credentialToDomain().credentialToRequest())
+                upload("credential", row.id) {
+                    apiCall<CredentialItemDto> {
+                        api.createCredentialItem(row.credentialToDomain().credentialToRequest())
+                    }
                 }
             }
         }
     }
 
     /**
+     * Uploads one adopted row, logging rather than throwing on failure.
+     *
+     * One rejected row (a validation error the local database never enforced,
+     * say) must not abandon the rest of the adoption half-done — the rows that
+     * do go up are the ones the user keeps. Whatever fails stays in the snapshot
+     * written just before.
+     */
+    private suspend fun upload(kind: String, localId: Long, block: suspend () -> Unit) {
+        runCatching { block() }
+            .onFailure { Log.w(TAG, "Could not adopt $kind row $localId", it) }
+    }
+
+    /**
      * Dumps the local database next to the app's files as
-     * `pre_cloud_backup.json`, in the same shape the Drive backup already uses,
-     * so it can be restored through the existing path if an upload goes wrong.
-     * Written once — a later sign-in must not overwrite the original snapshot.
+     * `pre_cloud_backup.json` so it can be recovered by hand if an upload goes
+     * wrong. Written once — a later sign-in must not overwrite the original
+     * snapshot.
      */
     private fun writeSafetySnapshot(
-        expiry: List<com.dev.trackone.feature.expiry.data.local.ExpiryEntity>,
-        expense: List<com.dev.trackone.feature.expense.data.local.ExpenseEntity>,
-        credential: List<com.dev.trackone.feature.credential.data.local.CredentialEntity>,
+        expiry: List<ExpiryEntity>,
+        expense: List<ExpenseEntity>,
+        credential: List<CredentialEntity>,
     ) {
         val file = File(context.filesDir, SNAPSHOT_FILE)
         if (file.exists()) return
-        runCatching { file.writeText(BackupDataSerializer.toJson(expiry, expense, credential)) }
+        runCatching { file.writeText(LocalSnapshotSerializer.toJson(expiry, expense, credential)) }
             .onFailure { Log.w(TAG, "Could not write the pre-cloud snapshot", it) }
     }
 
     private companion object {
         const val TAG = "CloudAccountManager"
         const val SNAPSHOT_FILE = "pre_cloud_backup.json"
+        const val OWNER_PREFS = "trackone_cache_owner"
+        const val KEY_CACHE_OWNER = "cache_owner_user_id"
+
+        /** No account has claimed the cache: either empty, or pre-cloud data. */
+        const val NO_OWNER = 0L
     }
 }

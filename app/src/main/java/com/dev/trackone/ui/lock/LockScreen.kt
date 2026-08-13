@@ -179,7 +179,7 @@ fun LockScreen(
                 containerColor = MaterialTheme.colorScheme.background,
                 shape = RoundedCornerShape(24.dp),
                 title = { Text("Reset App?", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface) },
-                text = { Text("Resetting the app will erase all your local TrackOne data and disable App Lock. You can restore your data from your latest Google Drive backup after resetting.\n\nAre you sure you want to proceed?", color = MaterialTheme.colorScheme.onSurfaceVariant) },
+                text = { Text("Resetting the app erases the copy of your data on this device, signs you out and disables App Lock. Your data stays in your TrackOne cloud account — sign in again afterwards to download it.\n\nAre you sure you want to proceed?", color = MaterialTheme.colorScheme.onSurfaceVariant) },
                 confirmButton = {
                     Button(
                         onClick = {

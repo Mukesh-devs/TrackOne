@@ -35,8 +35,8 @@ data class AuthSession(
 /**
  * Persists the bearer token from `/auth/signin`.
  *
- * Kept in EncryptedSharedPreferences: the token is a 30-day credential for the
- * user's whole dataset, so it should not sit in cleartext next to the app.
+ * Kept in EncryptedSharedPreferences: the token is a multi-day credential for
+ * the user's whole dataset, so it should not sit in cleartext next to the app.
  * If the keystore is unavailable (a handful of OEM builds fail to provision it)
  * we fall back to plain preferences rather than leaving the user unable to sign
  * in at all — the API is still TLS-protected either way.
@@ -76,6 +76,21 @@ class AuthTokenStore @Inject constructor(
     fun clear() {
         prefs.edit { clear() }
         _session.value = null
+    }
+
+    /**
+     * Drops a stored session that is already past its expiry, and reports
+     * whether it did.
+     *
+     * Lets the interceptor retire a dead token without a round trip. That
+     * matters offline: with no network there is no `401` to react to, so
+     * without this the expired session would sit there indefinitely and the app
+     * would look signed in while every call failed.
+     */
+    fun clearIfExpired(): Boolean {
+        val expired = _session.value?.isExpired == true
+        if (expired) clear()
+        return expired
     }
 
     private fun readSession(): AuthSession? {

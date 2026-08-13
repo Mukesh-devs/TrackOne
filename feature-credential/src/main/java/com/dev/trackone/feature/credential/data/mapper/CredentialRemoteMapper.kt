@@ -8,12 +8,16 @@ import com.dev.trackone.feature.credential.domain.model.CredentialItem
 /**
  * Mappers between the API wire model and the local layers.
  *
- * List responses mask the password as `********` unless `reveal=true` is asked
- * for, so the repository always requests the real value — a cache full of
- * asterisks would be worse than no cache at all.
+ * List responses mask the password as [MASKED_PASSWORD], so a DTO that came
+ * from a list has to be mapped with the real value supplied separately — see
+ * `CredentialRepositoryImpl.hydratePasswords`. A cache full of asterisks would
+ * be worse than no cache at all.
  */
 
-fun CredentialItemDto.toEntity(): CredentialEntity = CredentialEntity(
+/** What the API sends in place of a password on any list response. */
+const val MASKED_PASSWORD = "********"
+
+fun CredentialItemDto.toEntity(password: String = this.password): CredentialEntity = CredentialEntity(
     id = id,
     title = title,
     username = username,

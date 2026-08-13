@@ -85,12 +85,6 @@ dependencies {
     // Navigation
     implementation(libs.navigation.compose)
 
-    // Google Auth & Drive API
-    implementation(libs.play.services.auth)
-    implementation(libs.google.api.client.android)
-    implementation(libs.google.api.services.drive)
-    implementation(libs.google.http.client.gson)
-
     // Testing
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

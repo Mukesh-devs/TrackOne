@@ -64,8 +64,8 @@ import com.dev.trackone.core.ui.theme.Dimens
  * Gate in front of the app: TrackOne now keeps its data in the cloud, so there
  * is an account to sign into before there is anything to show.
  *
- * A stored token lasts 30 days, so this appears on first launch and then only
- * rarely — the [CloudAuthState.Checking] branch keeps the UI still while a
+ * A stored token lasts 7 days, so this appears on first launch and then about
+ * weekly — the [CloudAuthState.Checking] branch keeps the UI still while a
  * restored token is validated rather than flashing the form at a signed-in user.
  */
 @Composable
