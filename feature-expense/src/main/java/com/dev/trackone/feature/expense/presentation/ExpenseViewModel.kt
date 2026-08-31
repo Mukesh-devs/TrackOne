@@ -110,11 +110,6 @@ class ExpenseViewModel @Inject constructor(
         _uiState.update { it.copy(selectedPeriod = period, currentDate = System.currentTimeMillis()) }
     }
 
-    /** Jump the current view to a specific month (used by the Home month dropdown). */
-    fun selectMonth(monthMillis: Long) {
-        _uiState.update { it.copy(selectedPeriod = TimePeriod.MONTH, currentDate = monthMillis) }
-    }
-
     /**
      * Jump straight to a date, keeping the selected period. The picker already
      * works in whatever granularity the period uses, so switching it here would

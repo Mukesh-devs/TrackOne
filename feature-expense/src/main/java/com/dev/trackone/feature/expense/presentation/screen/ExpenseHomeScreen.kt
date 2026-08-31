@@ -67,7 +67,7 @@ fun ExpenseHomeScreen(
     dateLabel: String,
     onPeriodChange: (TimePeriod) -> Unit,
     onNavigateDate: (Boolean) -> Unit,
-    onSelectMonth: (Long) -> Unit,
+    onPickDate: (Long) -> Unit,
     onItemClick: (ExpenseItem) -> Unit,
     onViewAllClick: () -> Unit,
     isRefreshing: Boolean = false,
@@ -102,8 +102,10 @@ fun ExpenseHomeScreen(
                     balance = uiState.balance,
                     periodWord = periodWord,
                     dateLabel = dateLabel,
+                    period = uiState.selectedPeriod,
+                    currentDate = uiState.currentDate,
                     onNavigateDate = onNavigateDate,
-                    onSelectMonth = onSelectMonth,
+                    onPickDate = onPickDate,
                     expenseItems = uiState.expenseItems,
                 )
             }
@@ -243,8 +245,10 @@ private fun HeroCard(
     balance: Double,
     periodWord: String,
     dateLabel: String,
+    period: TimePeriod,
+    currentDate: Long,
     onNavigateDate: (Boolean) -> Unit,
-    onSelectMonth: (Long) -> Unit,
+    onPickDate: (Long) -> Unit,
     expenseItems: List<ExpenseItem>,
 ) {
     Surface(
@@ -272,7 +276,12 @@ private fun HeroCard(
                         style = MaterialTheme.typography.titleMedium,
                         color = Color.White.copy(alpha = 0.9f),
                     )
-                    MonthPickerChip(dateLabel = dateLabel, onSelectMonth = onSelectMonth)
+                    PeriodChip(
+                        dateLabel = dateLabel,
+                        period = period,
+                        currentDate = currentDate,
+                        onPickDate = onPickDate,
+                    )
                 }
 
                 Spacer(modifier = Modifier.height(4.dp))
@@ -307,64 +316,57 @@ private fun HeroCard(
     }
 }
 
-/** Chip showing the current period label; tapping opens a dropdown of recent months. */
+/**
+ * Chip showing the current period label; tapping opens a picker in that same
+ * granularity. It used to list months whatever the filter said, so picking a
+ * date in Day or Year mode was impossible — and choosing one silently dropped
+ * you back into Month.
+ */
 @Composable
-private fun MonthPickerChip(dateLabel: String, onSelectMonth: (Long) -> Unit) {
+private fun PeriodChip(
+    dateLabel: String,
+    period: TimePeriod,
+    currentDate: Long,
+    onPickDate: (Long) -> Unit,
+) {
     var open by remember { mutableStateOf(false) }
-    val months = remember { recentMonths() }
-    Box {
-        Surface(
-            onClick = { open = true },
-            shape = RoundedCornerShape(20.dp),
-            color = Color.White.copy(alpha = 0.18f),
-        ) {
-            Row(
-                modifier = Modifier.padding(start = 12.dp, end = 8.dp, top = 6.dp, bottom = 6.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = dateLabel,
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White,
-                )
-                Icon(
-                    imageVector = Icons.Default.KeyboardArrowDown,
-                    contentDescription = "Choose month",
-                    tint = Color.White,
-                    modifier = Modifier.size(18.dp),
-                )
-            }
-        }
-        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
-            months.forEach { (label, millis) ->
-                DropdownMenuItem(
-                    text = { Text(label) },
-                    onClick = {
-                        onSelectMonth(millis)
-                        open = false
-                    },
-                )
-            }
-        }
-    }
-}
 
-/** Last 5 years of months as (label, first-of-month millis), newest first — scrollable. */
-private fun recentMonths(): List<Pair<String, Long>> {
-    val out = ArrayList<Pair<String, Long>>(60)
-    val cal = Calendar.getInstance()
-    repeat(60) {
-        cal.set(Calendar.DAY_OF_MONTH, 1)
-        cal.set(Calendar.HOUR_OF_DAY, 12)
-        cal.set(Calendar.MINUTE, 0)
-        cal.set(Calendar.SECOND, 0)
-        cal.set(Calendar.MILLISECOND, 0)
-        val label = com.dev.trackone.core.common.util.DateUtils.formatMonthYear(cal.timeInMillis)
-        out.add(label to cal.timeInMillis)
-        cal.add(Calendar.MONTH, -1)
+    Surface(
+        onClick = { open = true },
+        shape = RoundedCornerShape(20.dp),
+        color = Color.White.copy(alpha = 0.18f),
+    ) {
+        Row(
+            modifier = Modifier.padding(start = 12.dp, end = 8.dp, top = 6.dp, bottom = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = dateLabel,
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Bold,
+                color = Color.White,
+            )
+            Icon(
+                imageVector = Icons.Default.KeyboardArrowDown,
+                contentDescription = when (period) {
+                    TimePeriod.DAY -> "Choose a day"
+                    TimePeriod.MONTH -> "Choose a month"
+                    TimePeriod.YEAR -> "Choose a year"
+                },
+                tint = Color.White,
+                modifier = Modifier.size(18.dp),
+            )
+        }
     }
-    return out
+
+    if (open) {
+        PeriodPickerDialog(
+            period = period,
+            currentDate = currentDate,
+            onPick = onPickDate,
+            onDismiss = { open = false },
+        )
+    }
 }
 
 @Composable

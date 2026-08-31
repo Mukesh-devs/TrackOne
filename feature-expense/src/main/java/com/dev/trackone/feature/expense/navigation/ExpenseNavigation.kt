@@ -156,7 +156,7 @@ fun ExpenseNavigation(
                             dateLabel = dateLabel,
                             onPeriodChange = viewModel::setTimePeriod,
                             onNavigateDate = viewModel::navigateDate,
-                            onSelectMonth = viewModel::selectMonth,
+                            onPickDate = viewModel::jumpToDate,
                             onItemClick = { item ->
                                 viewModel.selectItem(item)
                                 navController.navigate(ExpenseRoutes.DETAIL)
