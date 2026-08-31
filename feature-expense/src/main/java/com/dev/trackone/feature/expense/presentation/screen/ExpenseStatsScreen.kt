@@ -86,6 +86,7 @@ fun ExpenseStatsScreen(
     dateLabel: String,
     onPeriodChange: (TimePeriod) -> Unit,
     onNavigateDate: (Boolean) -> Unit,
+    onPickDate: (Long) -> Unit,
     getCsvData: () -> String,
     onSliceClick: (SpendingFilter) -> Unit,
     onMessage: (String) -> Unit = {},
@@ -174,8 +175,11 @@ fun ExpenseStatsScreen(
                 Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surface, tonalElevation = 1.dp) {
                     SharedDateNavigationRow(
                         dateLabel = dateLabel,
+                        period = uiState.selectedPeriod,
+                        currentDate = uiState.currentDate,
                         onPrevious = { onNavigateDate(false) },
                         onNext = { onNavigateDate(true) },
+                        onPickDate = onPickDate,
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                     )
                 }

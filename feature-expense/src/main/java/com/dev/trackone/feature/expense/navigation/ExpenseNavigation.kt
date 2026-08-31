@@ -171,6 +171,7 @@ fun ExpenseNavigation(
                             dateLabel = dateLabel,
                             onPeriodChange = { viewModel.setTimePeriod(it) },
                             onNavigateDate = { viewModel.navigateDate(it) },
+                            onPickDate = viewModel::jumpToDate,
                             onItemClick = { item ->
                                 viewModel.selectItem(item)
                                 navController.navigate(ExpenseRoutes.DETAIL)
@@ -204,6 +205,7 @@ fun ExpenseNavigation(
                             dateLabel = dateLabel,
                             onPeriodChange = viewModel::setTimePeriod,
                             onNavigateDate = viewModel::navigateDate,
+                            onPickDate = viewModel::jumpToDate,
                             getCsvData = viewModel::generateCsvForCurrentPeriod,
                             onSliceClick = { filter ->
                                 viewModel.selectSpendingFilter(filter)

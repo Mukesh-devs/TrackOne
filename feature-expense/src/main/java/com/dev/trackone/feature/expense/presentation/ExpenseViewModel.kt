@@ -115,6 +115,15 @@ class ExpenseViewModel @Inject constructor(
         _uiState.update { it.copy(selectedPeriod = TimePeriod.MONTH, currentDate = monthMillis) }
     }
 
+    /**
+     * Jump straight to a date, keeping the selected period. The picker already
+     * works in whatever granularity the period uses, so switching it here would
+     * only undo the user's choice.
+     */
+    fun jumpToDate(dateMillis: Long) {
+        _uiState.update { it.copy(currentDate = dateMillis) }
+    }
+
     fun navigateDate(forward: Boolean) {
         val state = _uiState.value
         val cal = Calendar.getInstance().apply { timeInMillis = state.currentDate }
