@@ -1,8 +1,8 @@
 package com.dev.trackone.feature.expiry.presentation.screen
 
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -20,19 +20,20 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Inbox
 import androidx.compose.material.icons.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SearchOff
 import androidx.compose.material.icons.filled.Timer
-import androidx.compose.material.icons.outlined.FilterList
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -43,15 +44,17 @@ import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.dev.trackone.core.common.util.DateUtils
@@ -63,19 +66,12 @@ import com.dev.trackone.core.ui.theme.WarningAmber
 import com.dev.trackone.feature.expiry.domain.model.ExpiryItem
 import com.dev.trackone.feature.expiry.presentation.ExpiryUiState
 
-private enum class ExpiryFilter(val label: String) {
-    ALL("All"),
-    SOON("Expiring Soon"),
-    EXPIRED("Expired"),
-    OTHERS("Others"),
-}
-
 private const val SOON_THRESHOLD_DAYS = 30L
 
 /**
  * Expiry home — a self-contained screen (own header, no shared app chrome):
- * greeting header + bell, search + filter, category pills, and a list of items.
- * Tap an item for its detail; swipe an expired item left to trash it.
+ * title, search, and every item sorted soonest-first. Tap an item for its
+ * detail; swipe an expired item left to trash it.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -87,30 +83,25 @@ fun ExpiryHomeScreen(
     modifier: Modifier = Modifier,
 ) {
     val now = System.currentTimeMillis()
-    var filter by remember { mutableStateOf(ExpiryFilter.ALL) }
     val query = uiState.searchQuery.trim()
+    val focusManager = LocalFocusManager.current
+    val listState = rememberLazyListState()
 
-    // Trashed items are hidden from Home (they live in the Expired tab).
-    val searched = remember(uiState.allItems, uiState.trashedIds, query) {
+    // Trashed items are hidden from Home (they live in the Expired tab). The
+    // sort puts whatever runs out first at the top and anything already expired
+    // at the bottom, which is what the old "Expiring Soon" pill was for.
+    val visible = remember(uiState.allItems, uiState.trashedIds, query) {
         uiState.allItems
             .filterNot { it.id in uiState.trashedIds }
             .filter { query.isBlank() || it.matchesQuery(query) }
+            .sortedWith(compareBy({ it.expiryDate < now }, { it.expiryDate }))
     }
 
-    val allCount = searched.size
-    val expiredCount = searched.count { it.expiryDate < now }
-    val soonCount = searched.count { it.expiryDate >= now && DateUtils.daysUntil(it.expiryDate) <= SOON_THRESHOLD_DAYS }
-    val othersCount = searched.count { it.expiryDate >= now && DateUtils.daysUntil(it.expiryDate) > SOON_THRESHOLD_DAYS }
-
-    val visible = remember(searched, filter) {
-        when (filter) {
-            ExpiryFilter.ALL -> searched.sortedWith(compareBy({ it.expiryDate < now }, { it.expiryDate }))
-            ExpiryFilter.SOON -> searched.filter { it.expiryDate >= now && DateUtils.daysUntil(it.expiryDate) <= SOON_THRESHOLD_DAYS }
-                .sortedBy { it.expiryDate }
-            ExpiryFilter.EXPIRED -> searched.filter { it.expiryDate < now }.sortedBy { it.expiryDate }
-            ExpiryFilter.OTHERS -> searched.filter { it.expiryDate >= now && DateUtils.daysUntil(it.expiryDate) > SOON_THRESHOLD_DAYS }
-                .sortedBy { it.expiryDate }
-        }
+    // Scrolling means the user has moved on from the search field. Without this
+    // the caret keeps blinking and the keyboard stays up over the results until
+    // they leave the screen entirely.
+    LaunchedEffect(listState.isScrollInProgress) {
+        if (listState.isScrollInProgress) focusManager.clearFocus()
     }
 
     Column(
@@ -118,19 +109,12 @@ fun ExpiryHomeScreen(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background),
     ) {
-        ExpiryHeader(onBellClick = { filter = ExpiryFilter.SOON })
+        ExpiryHeader()
 
-        SearchRow(query = uiState.searchQuery, onQueryChange = onSearchQueryChange)
-
-        FilterPills(
-            selected = filter,
-            counts = mapOf(
-                ExpiryFilter.ALL to allCount,
-                ExpiryFilter.SOON to soonCount,
-                ExpiryFilter.EXPIRED to expiredCount,
-                ExpiryFilter.OTHERS to othersCount,
-            ),
-            onSelect = { filter = it },
+        SearchRow(
+            query = uiState.searchQuery,
+            onQueryChange = onSearchQueryChange,
+            onSearchDone = { focusManager.clearFocus() },
         )
 
         when {
@@ -145,29 +129,31 @@ fun ExpiryHomeScreen(
             visible.isEmpty() -> TrackOneEmptyState(
                 icon = Icons.Default.SearchOff,
                 title = "Nothing here",
-                subtitle = if (query.isNotBlank()) "No items match \"$query\"" else "No ${filter.label.lowercase()} items",
+                subtitle = if (query.isNotBlank()) {
+                    "No items match \"$query\""
+                } else {
+                    "Everything you're tracking is in the Expired tab"
+                },
             )
 
             else -> LazyColumn(
+                state = listState,
                 contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 140.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp),
             ) {
-                item {
-                    Text(
-                        text = filter.label,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onBackground,
-                        modifier = Modifier.padding(vertical = 4.dp),
-                    )
-                }
                 items(items = visible, key = { it.id }) { item ->
+                    // Opening a detail is one of the "moved on" moments too —
+                    // otherwise the caret is still live on the way back.
+                    val open = {
+                        focusManager.clearFocus()
+                        onItemClick(item)
+                    }
                     if (item.expiryDate < now) {
                         SwipeToTrash(onDelete = { onTrashItem(item) }) {
-                            ExpiryItemCard(item = item, now = now, onClick = { onItemClick(item) })
+                            ExpiryItemCard(item = item, now = now, onClick = open)
                         }
                     } else {
-                        ExpiryItemCard(item = item, now = now, onClick = { onItemClick(item) })
+                        ExpiryItemCard(item = item, now = now, onClick = open)
                     }
                 }
             }
@@ -178,12 +164,12 @@ fun ExpiryHomeScreen(
 // ── Header ────────────────────────────────────────────────────────────────────
 
 @Composable
-private fun ExpiryHeader(onBellClick: () -> Unit) {
+private fun ExpiryHeader() {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .statusBarsPadding()
-            .padding(start = 20.dp, end = 12.dp, top = 12.dp, bottom = 8.dp),
+            .padding(start = 20.dp, end = 20.dp, top = 12.dp, bottom = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
@@ -206,132 +192,72 @@ private fun ExpiryHeader(onBellClick: () -> Unit) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        IconButton(onClick = onBellClick) {
-            Icon(
-                imageVector = Icons.Default.Notifications,
-                contentDescription = "Show items expiring soon",
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
     }
 }
 
-// ── Search + filter button ────────────────────────────────────────────────────
+// ── Search ────────────────────────────────────────────────────────────────────
 
 @Composable
-private fun SearchRow(query: String, onQueryChange: (String) -> Unit) {
-    Row(
+private fun SearchRow(
+    query: String,
+    onQueryChange: (String) -> Unit,
+    onSearchDone: () -> Unit,
+) {
+    Surface(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 20.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
     ) {
-        Surface(
-            modifier = Modifier.weight(1f),
-            shape = RoundedCornerShape(16.dp),
-            color = MaterialTheme.colorScheme.surface,
-            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        Row(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Row(
-                modifier = Modifier.padding(horizontal = 14.dp, vertical = 4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Search,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(20.dp),
-                )
-                Spacer(modifier = Modifier.width(10.dp))
-                Box(modifier = Modifier.weight(1f)) {
-                    if (query.isEmpty()) {
-                        Text(
-                            text = "Search items...",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                    androidx.compose.foundation.text.BasicTextField(
-                        value = query,
-                        onValueChange = onQueryChange,
-                        singleLine = true,
-                        textStyle = MaterialTheme.typography.bodyMedium.copy(
-                            color = MaterialTheme.colorScheme.onSurface,
-                        ),
-                        cursorBrush = androidx.compose.ui.graphics.SolidColor(MaterialTheme.colorScheme.primary),
-                        modifier = Modifier.fillMaxWidth(),
+            Icon(
+                imageVector = Icons.Default.Search,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(20.dp),
+            )
+            Spacer(modifier = Modifier.width(10.dp))
+            Box(modifier = Modifier.weight(1f)) {
+                if (query.isEmpty()) {
+                    Text(
+                        text = "Search items...",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-                if (query.isNotEmpty()) {
-                    IconButton(onClick = { onQueryChange("") }, modifier = Modifier.size(28.dp)) {
-                        Icon(
-                            imageVector = Icons.Default.Close,
-                            contentDescription = "Clear",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(18.dp),
-                        )
-                    }
+                BasicTextField(
+                    value = query,
+                    onValueChange = onQueryChange,
+                    singleLine = true,
+                    textStyle = MaterialTheme.typography.bodyMedium.copy(
+                        color = MaterialTheme.colorScheme.onSurface,
+                    ),
+                    // The results are already live as you type, so the IME key
+                    // has nothing to submit — it just puts the keyboard away.
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                    keyboardActions = KeyboardActions(onSearch = { onSearchDone() }),
+                    cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+            if (query.isNotEmpty()) {
+                IconButton(
+                    // Clearing is "done searching", so it drops the caret too.
+                    onClick = { onQueryChange(""); onSearchDone() },
+                    modifier = Modifier.size(28.dp),
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "Clear search",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(18.dp),
+                    )
                 }
-            }
-        }
-
-        Surface(
-            shape = RoundedCornerShape(16.dp),
-            color = MaterialTheme.colorScheme.primaryContainer,
-            modifier = Modifier.size(48.dp),
-        ) {
-            Box(contentAlignment = Alignment.Center) {
-                Icon(
-                    imageVector = Icons.Outlined.FilterList,
-                    contentDescription = "Filter",
-                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                    modifier = Modifier.size(22.dp),
-                )
-            }
-        }
-    }
-}
-
-// ── Filter pills ──────────────────────────────────────────────────────────────
-
-@Composable
-private fun FilterPills(
-    selected: ExpiryFilter,
-    counts: Map<ExpiryFilter, Int>,
-    onSelect: (ExpiryFilter) -> Unit,
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .horizontalScroll(rememberScrollState())
-            .padding(horizontal = 20.dp, vertical = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
-        ExpiryFilter.entries.forEach { f ->
-            val accent = when (f) {
-                ExpiryFilter.ALL -> MaterialTheme.colorScheme.primary
-                ExpiryFilter.SOON -> WarningAmber
-                ExpiryFilter.EXPIRED -> ExpiredRed
-                ExpiryFilter.OTHERS -> MaterialTheme.colorScheme.onSurfaceVariant
-            }
-            val isSelected = selected == f
-            Surface(
-                onClick = { onSelect(f) },
-                shape = RoundedCornerShape(20.dp),
-                color = if (isSelected) accent.copy(alpha = 0.14f) else MaterialTheme.colorScheme.surface,
-                border = androidx.compose.foundation.BorderStroke(
-                    1.dp,
-                    if (isSelected) accent.copy(alpha = 0.5f) else MaterialTheme.colorScheme.outlineVariant,
-                ),
-            ) {
-                Text(
-                    text = "${f.label} (${counts[f] ?: 0})",
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                    color = if (isSelected) accent else MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                )
             }
         }
     }
