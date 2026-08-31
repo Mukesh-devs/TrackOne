@@ -61,6 +61,7 @@ import com.dev.trackone.core.ui.component.TrackOneEmptyState
 import com.dev.trackone.core.ui.component.TrackOneFloatingNav
 import com.dev.trackone.feature.expense.presentation.ExpenseViewModel
 import com.dev.trackone.feature.expense.presentation.screen.ExpenseAddScreen
+import com.dev.trackone.feature.expense.presentation.screen.ExpenseBreakdownDetailScreen
 import com.dev.trackone.feature.expense.presentation.screen.ExpenseDetailScreen
 import com.dev.trackone.feature.expense.presentation.screen.ExpenseHomeScreen
 import com.dev.trackone.feature.expense.presentation.screen.ExpenseStatsScreen
@@ -75,6 +76,9 @@ object ExpenseRoutes {
     const val SETTINGS = "expense_settings"
     const val DETAIL = "expense_detail"
     const val EDIT = "expense_edit"
+
+    /** Transactions behind one slice of the Stats breakdown. */
+    const val BREAKDOWN = "expense_breakdown"
 }
 
 private data class ExpenseTab(val label: String, val icon: ImageVector, val route: String)
@@ -201,6 +205,10 @@ fun ExpenseNavigation(
                             onPeriodChange = viewModel::setTimePeriod,
                             onNavigateDate = viewModel::navigateDate,
                             getCsvData = viewModel::generateCsvForCurrentPeriod,
+                            onSliceClick = { filter ->
+                                viewModel.selectSpendingFilter(filter)
+                                navController.navigate(ExpenseRoutes.BREAKDOWN)
+                            },
                             onMessage = ::showMessage,
                         )
 
@@ -228,6 +236,26 @@ fun ExpenseNavigation(
                             currentTab = route
                         },
                         modifier = Modifier.align(Alignment.BottomCenter),
+                    )
+                }
+            }
+
+            composable(ExpenseRoutes.BREAKDOWN) {
+                uiState.spendingFilter?.let { filter ->
+                    ExpenseBreakdownDetailScreen(
+                        filter = filter,
+                        // Already narrowed to the period the chart was showing.
+                        items = uiState.expenseItems,
+                        periodLabel = dateLabel,
+                        periodTotal = uiState.totalExpense,
+                        onItemClick = { item ->
+                            viewModel.selectItem(item)
+                            navController.navigate(ExpenseRoutes.DETAIL)
+                        },
+                        onBack = {
+                            viewModel.clearSpendingFilter()
+                            navController.popBackStack()
+                        },
                     )
                 }
             }

@@ -14,6 +14,31 @@ enum class TimePeriod(val label: String) {
 }
 
 /**
+ * One slice of the statistics breakdown, drilled into.
+ *
+ * The chart splits the same spend two ways, and both drill down identically, so
+ * the screen behind a slice takes this rather than a category or a payment mode
+ * specifically.
+ */
+sealed interface SpendingFilter {
+
+    /** Heading for the drill-down screen — the slice's own name. */
+    val label: String
+
+    fun matches(item: ExpenseItem): Boolean
+
+    data class ByCategory(val category: ExpenseCategory) : SpendingFilter {
+        override val label: String get() = category.displayName
+        override fun matches(item: ExpenseItem): Boolean = item.category == category
+    }
+
+    data class ByPaymentMode(val mode: PaymentMode) : SpendingFilter {
+        override val label: String get() = mode.displayName
+        override fun matches(item: ExpenseItem): Boolean = item.paymentMode == mode
+    }
+}
+
+/**
  * UI state for the Expense module screens.
  */
 data class ExpenseUiState(
@@ -30,6 +55,8 @@ data class ExpenseUiState(
     val isSearchActive: Boolean = false,
     val error: String? = null,
     val selectedCategory: ExpenseCategory? = null,
+    /** The statistics slice being drilled into, if any. */
+    val spendingFilter: SpendingFilter? = null,
     val selectedPeriod: TimePeriod = TimePeriod.MONTH,
     val currentDate: Long = System.currentTimeMillis(),
 

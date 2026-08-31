@@ -3,7 +3,8 @@
 *.aar
 *.ap_
 *.aab
-
+*.dm
+output-metadata.json
 # Local configuration file (sdk path, etc)
 local.properties
 

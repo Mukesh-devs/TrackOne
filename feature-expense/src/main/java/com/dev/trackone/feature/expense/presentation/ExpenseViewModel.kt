@@ -180,6 +180,19 @@ class ExpenseViewModel @Inject constructor(
         _uiState.update { it.copy(selectedCategory = category) }
     }
 
+    /**
+     * Drill into one slice of the statistics breakdown. Held here rather than
+     * in the route so the selection survives a rotation the same way
+     * [selectItem] does.
+     */
+    fun selectSpendingFilter(filter: SpendingFilter) {
+        _uiState.update { it.copy(spendingFilter = filter) }
+    }
+
+    fun clearSpendingFilter() {
+        _uiState.update { it.copy(spendingFilter = null) }
+    }
+
     // ========== CRUD ==========
 
     fun deleteItem(item: ExpenseItem) {

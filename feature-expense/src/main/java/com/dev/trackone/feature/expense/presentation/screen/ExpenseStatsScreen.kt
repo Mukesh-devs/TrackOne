@@ -28,6 +28,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Insights
 import androidx.compose.material.icons.filled.PieChart
@@ -55,13 +56,19 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.dev.trackone.core.common.util.CurrencyUtils
-import com.dev.trackone.feature.expense.domain.model.ExpenseCategory
 import com.dev.trackone.feature.expense.domain.model.ExpenseItem
-import com.dev.trackone.feature.expense.domain.model.PaymentMode
 import com.dev.trackone.feature.expense.presentation.ExpenseUiState
+import com.dev.trackone.feature.expense.presentation.SpendingFilter
 import com.dev.trackone.feature.expense.presentation.TimePeriod
 
-private data class Slice(val label: String, val amount: Double, val fraction: Float, val color: Color)
+private data class Slice(
+    val label: String,
+    val amount: Double,
+    val fraction: Float,
+    val color: Color,
+    /** What this slice narrows to when tapped. */
+    val filter: SpendingFilter,
+)
 
 /**
  * The two ways the same spend can be sliced. They share one card and one chart
@@ -80,6 +87,7 @@ fun ExpenseStatsScreen(
     onPeriodChange: (TimePeriod) -> Unit,
     onNavigateDate: (Boolean) -> Unit,
     getCsvData: () -> String,
+    onSliceClick: (SpendingFilter) -> Unit,
     onMessage: (String) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
@@ -209,6 +217,7 @@ fun ExpenseStatsScreen(
                         byCategory = byCategory,
                         byPaymentMode = byPaymentMode,
                         total = totalExpense,
+                        onSliceClick = onSliceClick,
                     )
                 }
             }
@@ -227,12 +236,15 @@ fun ExpenseStatsScreen(
  * title so Category and Payment Mode are equally reachable, and the donut's
  * centre keeps showing the same total either way — which is what makes the two
  * views comparable at a glance rather than two separate charts to scroll past.
+ *
+ * Each legend row opens the transactions behind that slice.
  */
 @Composable
 private fun SpendingBreakdownCard(
     byCategory: List<Slice>,
     byPaymentMode: List<Slice>,
     total: Double,
+    onSliceClick: (SpendingFilter) -> Unit,
 ) {
     var breakdown by rememberSaveable { mutableStateOf(Breakdown.CATEGORY) }
 
@@ -295,7 +307,11 @@ private fun SpendingBreakdownCard(
 
                     slices.forEach { s ->
                         Row(
-                            modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(10.dp))
+                                .clickable { onSliceClick(s.filter) }
+                                .padding(horizontal = 4.dp, vertical = 8.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Box(modifier = Modifier.size(12.dp).clip(CircleShape).background(s.color))
@@ -303,6 +319,12 @@ private fun SpendingBreakdownCard(
                             Text(s.label, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
                             Text("${(s.fraction * 100).toInt()}%", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(end = 10.dp))
                             Text(CurrencyUtils.formatAmount(s.amount), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
+                            Icon(
+                                imageVector = Icons.Default.ChevronRight,
+                                contentDescription = "View ${s.label} transactions",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(18.dp),
+                            )
                         }
                     }
                 }
@@ -409,17 +431,17 @@ private fun InsightRow(label: String, amount: Double, accent: Color) {
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 private fun categorySlices(items: List<ExpenseItem>): List<Slice> =
-    slicesOf(items, { it.category }, { it.displayName }, ::categoryColor)
+    slicesOf(items, { it.category }, ::categoryColor, SpendingFilter::ByCategory)
 
 private fun paymentModeSlices(items: List<ExpenseItem>): List<Slice> =
-    slicesOf(items, { it.paymentMode }, { it.displayName }, ::paymentModeColor)
+    slicesOf(items, { it.paymentMode }, ::paymentModeColor, SpendingFilter::ByPaymentMode)
 
 /** Groups spend by [keyOf] and turns each group into a share of the total. */
 private fun <K> slicesOf(
     items: List<ExpenseItem>,
     keyOf: (ExpenseItem) -> K,
-    labelOf: (K) -> String,
     colorOf: (K) -> Color,
+    filterOf: (K) -> SpendingFilter,
 ): List<Slice> {
     val totals = items
         .groupBy(keyOf)
@@ -429,30 +451,16 @@ private fun <K> slicesOf(
     if (total <= 0.0) return emptyList()
     return totals.entries
         .sortedByDescending { it.value }
-        .map { Slice(labelOf(it.key), it.value, (it.value / total).toFloat(), colorOf(it.key)) }
+        .map { (key, amount) ->
+            val filter = filterOf(key)
+            Slice(
+                label = filter.label,
+                amount = amount,
+                fraction = (amount / total).toFloat(),
+                color = colorOf(key),
+                filter = filter,
+            )
+        }
 }
 
-private fun categoryColor(c: ExpenseCategory): Color = when (c) {
-    ExpenseCategory.FOOD -> Color(0xFFFFB300)
-    ExpenseCategory.TRANSPORTATION -> Color(0xFF1E88E5)
-    ExpenseCategory.HOUSING -> Color(0xFF43A047)
-    ExpenseCategory.UTILITIES -> Color(0xFF8E24AA)
-    ExpenseCategory.HEALTHCARE -> Color(0xFFE53935)
-    ExpenseCategory.SHOPPING -> Color(0xFF00ACC1)
-    ExpenseCategory.ENTERTAINMENT -> Color(0xFFE91E63)
-    ExpenseCategory.EDUCATION -> Color(0xFF3949AB)
-    ExpenseCategory.TRAVEL -> Color(0xFF00897B)
-    ExpenseCategory.PERSONAL -> Color(0xFF6D4C41)
-    ExpenseCategory.INSURANCE -> Color(0xFF546E7A)
-    ExpenseCategory.SAVINGS -> Color(0xFF00695C)
-    else -> Color(0xFF9E9E9E)
-}
-
-private fun paymentModeColor(m: PaymentMode): Color = when (m) {
-    PaymentMode.CREDIT_CARD -> Color(0xFF5E35B1)
-    PaymentMode.DEBIT_CARD -> Color(0xFF1E88E5)
-    PaymentMode.UPI -> Color(0xFF00897B)
-    PaymentMode.CASH -> Color(0xFF43A047)
-    PaymentMode.NET_BANKING -> Color(0xFFF4511E)
-    PaymentMode.OTHERS -> Color(0xFF9E9E9E)
-}
+// Slice colours live in ExpenseChartColors.kt — the drill-down screen shares them.
