@@ -22,12 +22,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.filled.ViewList
 import androidx.compose.material.icons.filled.AccountBalanceWallet
-import androidx.compose.material.icons.filled.CalendarToday
+import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.VpnKey
@@ -55,11 +57,27 @@ import com.dev.trackone.core.ui.theme.WarningAmber
 import java.util.Calendar
 
 /**
+ * One entry in the Apps section: the module plus the one number worth knowing
+ * about it today. Built once and rendered by whichever layout is selected, so
+ * list and grid can never drift apart.
+ */
+private data class AppEntry(
+    val icon: ImageVector,
+    val title: String,
+    val subtitle: String,
+    val metricValue: String,
+    val metricLabel: String,
+    val accent: Color,
+    val onClick: () -> Unit,
+)
+
+/**
  * Dashboard — the app's home hub.
  *
- * Shows today's snapshot across all three modules and acts as the single entry
- * point into each of them. Fully theme-token driven, so it follows the app
- * palette (and renders correctly in dark mode) instead of baking in colours.
+ * Every module is one row (or tile) carrying its own today's-metric, rather
+ * than a separate overview strip repeating the same three destinations. Fully
+ * theme-token driven, so it follows the app palette (and renders correctly in
+ * dark mode) instead of baking in colours.
  */
 @Composable
 fun DashboardScreen(
@@ -70,11 +88,46 @@ fun DashboardScreen(
     onExpiryClick: () -> Unit,
     onExpenseClick: () -> Unit,
     onCredentialClick: () -> Unit,
+    isGridView: Boolean,
+    onToggleViewMode: (Boolean) -> Unit,
     // Preserves the previous hardcoded greeting; hoisted to a parameter so it
     // can be driven from preferences later without touching this screen.
     userName: String = "Mukesh",
     modifier: Modifier = Modifier,
 ) {
+    val primary = MaterialTheme.colorScheme.primary
+    val apps = remember(expiringTodayCount, todayExpenseTotal, credentialCount, primary) {
+        listOf(
+            AppEntry(
+                icon = Icons.Default.Timer,
+                title = "Expiry Tracker",
+                subtitle = "Track items before they expire",
+                metricValue = "$expiringTodayCount",
+                metricLabel = "expiring today",
+                accent = WarningAmber,
+                onClick = onExpiryClick,
+            ),
+            AppEntry(
+                icon = Icons.Default.AccountBalanceWallet,
+                title = "Expense Tracker",
+                subtitle = "Manage spending and stay on budget",
+                metricValue = CurrencyUtils.formatAmount(todayExpenseTotal),
+                metricLabel = "spent today",
+                accent = primary,
+                onClick = onExpenseClick,
+            ),
+            AppEntry(
+                icon = Icons.Default.VpnKey,
+                title = "Credential Manager",
+                subtitle = "Securely store and manage accounts",
+                metricValue = "$credentialCount",
+                metricLabel = "saved accounts",
+                accent = ActiveGreen,
+                onClick = onCredentialClick,
+            ),
+        )
+    }
+
     Surface(
         modifier = modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.background,
@@ -88,82 +141,48 @@ fun DashboardScreen(
             item { GreetingSection(userName = userName) }
 
             item {
-                SectionTitle(text = "Today's Overview", topPadding = Dimens.SpacingXl)
+                AppsSectionHeader(
+                    isGridView = isGridView,
+                    onToggleViewMode = onToggleViewMode,
+                )
             }
 
-            item {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        // Equal-height cards regardless of label wrapping.
-                        .height(IntrinsicSize.Min)
-                        .padding(horizontal = Dimens.ScreenPadding),
-                    horizontalArrangement = Arrangement.spacedBy(Dimens.SpacingMd),
-                ) {
-                    OverviewStatCard(
-                        icon = Icons.Default.CalendarToday,
-                        accent = WarningAmber,
-                        label = "Expiring",
-                        value = "$expiringTodayCount",
-                        subLabel = "today",
-                        onClick = onExpiryClick,
-                        modifier = Modifier.weight(1f).fillMaxHeight(),
-                    )
-                    OverviewStatCard(
-                        icon = Icons.Default.AccountBalanceWallet,
-                        accent = MaterialTheme.colorScheme.primary,
-                        label = "Spent",
-                        value = CurrencyUtils.formatAmount(todayExpenseTotal),
-                        subLabel = "today",
-                        onClick = onExpenseClick,
-                        modifier = Modifier.weight(1f).fillMaxHeight(),
-                    )
-                    OverviewStatCard(
-                        icon = Icons.Default.VpnKey,
-                        accent = ActiveGreen,
-                        label = "Saved",
-                        value = "$credentialCount",
-                        subLabel = "accounts",
-                        onClick = onCredentialClick,
-                        modifier = Modifier.weight(1f).fillMaxHeight(),
-                    )
+            if (isGridView) {
+                // Only three modules, so the grid is laid out by hand: a
+                // LazyVerticalGrid nested in a LazyColumn has no bounded height
+                // to measure against.
+                items(apps.chunked(GRID_COLUMNS)) { rowApps ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(IntrinsicSize.Min)
+                            .padding(horizontal = Dimens.ScreenPadding),
+                        horizontalArrangement = Arrangement.spacedBy(Dimens.SpacingMd),
+                    ) {
+                        rowApps.forEach { app ->
+                            AppTile(
+                                app = app,
+                                modifier = Modifier.weight(1f).fillMaxHeight(),
+                            )
+                        }
+                        // Keeps a short final row's tiles the same width as a full one.
+                        repeat(GRID_COLUMNS - rowApps.size) {
+                            Spacer(modifier = Modifier.weight(1f))
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(Dimens.SpacingMd))
                 }
-            }
-
-            item { SectionTitle(text = "Modules", topPadding = Dimens.SpacingXl) }
-
-            item {
-                ModuleCard(
-                    icon = Icons.Default.Timer,
-                    title = "Expiry Tracker",
-                    subtitle = "Track items before they expire",
-                    accent = WarningAmber,
-                    onClick = onExpiryClick,
-                )
-            }
-            item { Spacer(modifier = Modifier.height(Dimens.SpacingMd)) }
-            item {
-                ModuleCard(
-                    icon = Icons.Default.AccountBalanceWallet,
-                    title = "Expense Tracker",
-                    subtitle = "Manage spending and stay on budget",
-                    accent = MaterialTheme.colorScheme.primary,
-                    onClick = onExpenseClick,
-                )
-            }
-            item { Spacer(modifier = Modifier.height(Dimens.SpacingMd)) }
-            item {
-                ModuleCard(
-                    icon = Icons.Default.VpnKey,
-                    title = "Credential Manager",
-                    subtitle = "Securely store and manage accounts",
-                    accent = ActiveGreen,
-                    onClick = onCredentialClick,
-                )
+            } else {
+                items(apps) { app ->
+                    AppRow(app = app)
+                    Spacer(modifier = Modifier.height(Dimens.SpacingMd))
+                }
             }
         }
     }
 }
+
+private const val GRID_COLUMNS = 2
 
 // ─── Top bar ────────────────────────────────────────────────────────────────────
 
@@ -215,154 +234,125 @@ private fun GreetingSection(userName: String) {
 }
 
 @Composable
-private fun SectionTitle(text: String, topPadding: androidx.compose.ui.unit.Dp) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.titleMedium,
-        fontWeight = FontWeight.Bold,
-        color = MaterialTheme.colorScheme.onBackground,
-        modifier = Modifier.padding(
-            start = Dimens.ScreenPadding,
-            end = Dimens.ScreenPadding,
-            top = topPadding,
-            bottom = Dimens.SpacingMd,
-        ),
-    )
+private fun AppsSectionHeader(isGridView: Boolean, onToggleViewMode: (Boolean) -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(
+                start = Dimens.ScreenPadding,
+                end = Dimens.SpacingSm,
+                top = Dimens.SpacingXl,
+                bottom = Dimens.SpacingMd,
+            ),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = "Apps",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onBackground,
+            modifier = Modifier.weight(1f),
+        )
+        IconButton(onClick = { onToggleViewMode(!isGridView) }) {
+            Icon(
+                // Shows the layout you'd switch *to*, which is how every
+                // gallery app's toggle reads.
+                imageVector = if (isGridView) {
+                    Icons.AutoMirrored.Filled.ViewList
+                } else {
+                    Icons.Default.GridView
+                },
+                contentDescription = if (isGridView) "Switch to list view" else "Switch to grid view",
+                tint = MaterialTheme.colorScheme.primary,
+            )
+        }
+    }
 }
 
-// ─── Overview stat card ─────────────────────────────────────────────────────────
+// ─── App card (shared chrome) ───────────────────────────────────────────────────
 
+/**
+ * The press-to-shrink surface both layouts sit in, so a tile and a row feel
+ * identical under the finger.
+ */
 @Composable
-private fun OverviewStatCard(
-    icon: ImageVector,
-    accent: Color,
-    label: String,
-    value: String,
-    subLabel: String,
+private fun AppSurface(
     onClick: () -> Unit,
+    pressedScale: Float,
     modifier: Modifier = Modifier,
+    content: @Composable () -> Unit,
 ) {
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
     val scale by animateFloatAsState(
-        targetValue = if (pressed) 0.96f else 1f,
+        targetValue = if (pressed) pressedScale else 1f,
         animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
-        label = "stat_scale",
+        label = "app_scale",
     )
 
     Surface(
         modifier = modifier
             .scale(scale)
             .clickable(interactionSource = interaction, indication = null, onClick = onClick),
-        shape = MaterialTheme.shapes.large,
-        color = MaterialTheme.colorScheme.surface,
-        tonalElevation = Dimens.ElevationTonal,
-        shadowElevation = Dimens.ElevationListItem,
-    ) {
-        Column(modifier = Modifier.padding(Dimens.SpacingMd)) {
-            Box(
-                modifier = Modifier
-                    .size(36.dp)
-                    .clip(CircleShape)
-                    .background(accent.copy(alpha = 0.14f)),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = accent,
-                    modifier = Modifier.size(18.dp),
-                )
-            }
-
-            Spacer(modifier = Modifier.height(Dimens.SpacingMd))
-
-            Text(
-                text = label,
-                style = MaterialTheme.typography.labelMedium,
-                color = accent,
-                maxLines = 1,
-            )
-
-            Spacer(modifier = Modifier.height(Dimens.SpacingXs))
-
-            Text(
-                text = value,
-                style = MaterialTheme.typography.titleLarge,
-                color = MaterialTheme.colorScheme.onSurface,
-                maxLines = 1,
-                // Long currency values shrink rather than truncate on small screens.
-                overflow = TextOverflow.Ellipsis,
-            )
-            Text(
-                text = subLabel,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-            )
-        }
-    }
-}
-
-// ─── Module card ────────────────────────────────────────────────────────────────
-
-@Composable
-private fun ModuleCard(
-    icon: ImageVector,
-    title: String,
-    subtitle: String,
-    accent: Color,
-    onClick: () -> Unit,
-) {
-    val interaction = remember { MutableInteractionSource() }
-    val pressed by interaction.collectIsPressedAsState()
-    val scale by animateFloatAsState(
-        targetValue = if (pressed) 0.98f else 1f,
-        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
-        label = "module_scale",
-    )
-
-    Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = Dimens.ScreenPadding)
-            .scale(scale)
-            .clickable(interactionSource = interaction, indication = null, onClick = onClick),
         shape = MaterialTheme.shapes.extraLarge,
         color = MaterialTheme.colorScheme.surface,
         tonalElevation = Dimens.ElevationTonal,
         shadowElevation = Dimens.ElevationListItem,
+        content = content,
+    )
+}
+
+@Composable
+private fun AppIconBadge(icon: ImageVector, accent: Color, size: androidx.compose.ui.unit.Dp) {
+    Box(
+        modifier = Modifier
+            .size(size)
+            .clip(CircleShape)
+            .background(accent.copy(alpha = 0.14f)),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = accent,
+            modifier = Modifier.size(Dimens.IconSizeMd),
+        )
+    }
+}
+
+// ─── List layout ────────────────────────────────────────────────────────────────
+
+/**
+ * Icon and name on the left, today's number on the right. The metric takes the
+ * chevron's place — with a figure sitting there the row still reads as
+ * tappable, and the arrow would only crowd it.
+ */
+@Composable
+private fun AppRow(app: AppEntry) {
+    AppSurface(
+        onClick = app.onClick,
+        pressedScale = 0.98f,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = Dimens.ScreenPadding),
     ) {
         Row(
             modifier = Modifier.padding(Dimens.CardPadding),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Box(
-                modifier = Modifier
-                    .size(48.dp)
-                    .clip(CircleShape)
-                    .background(accent.copy(alpha = 0.14f)),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = accent,
-                    modifier = Modifier.size(Dimens.IconSizeMd),
-                )
-            }
+            AppIconBadge(icon = app.icon, accent = app.accent, size = 48.dp)
 
             Spacer(modifier = Modifier.width(Dimens.SpacingLg))
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = title,
+                    text = app.title,
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurface,
                 )
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
-                    text = subtitle,
+                    text = app.subtitle,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 2,
@@ -370,11 +360,71 @@ private fun ModuleCard(
                 )
             }
 
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(Dimens.IconSizeMd),
+            Spacer(modifier = Modifier.width(Dimens.SpacingMd))
+
+            // Capped so a large total ellipsizes instead of squeezing the title
+            // down to nothing — without a bound, Ellipsis never gets to apply.
+            Column(
+                modifier = Modifier.widthIn(max = 132.dp),
+                horizontalAlignment = Alignment.End,
+            ) {
+                Text(
+                    text = app.metricValue,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = app.accent,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    text = app.metricLabel,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                )
+            }
+        }
+    }
+}
+
+// ─── Grid layout ────────────────────────────────────────────────────────────────
+
+/**
+ * The same entry as a tile. No subtitle — at half the width it would wrap to
+ * three lines and bury the number, which is the point of the tile.
+ */
+@Composable
+private fun AppTile(app: AppEntry, modifier: Modifier = Modifier) {
+    AppSurface(onClick = app.onClick, pressedScale = 0.96f, modifier = modifier) {
+        Column(modifier = Modifier.padding(Dimens.CardPadding)) {
+            AppIconBadge(icon = app.icon, accent = app.accent, size = 44.dp)
+
+            Spacer(modifier = Modifier.height(Dimens.SpacingMd))
+
+            Text(
+                text = app.title,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+
+            Spacer(modifier = Modifier.height(Dimens.SpacingMd))
+
+            Text(
+                text = app.metricValue,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = app.accent,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text = app.metricLabel,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
             )
         }
     }

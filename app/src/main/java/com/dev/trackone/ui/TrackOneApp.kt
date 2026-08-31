@@ -76,6 +76,11 @@ fun TrackOneApp(
     val todayExpenseTotal by dashboardViewModel.todayExpenseTotal.collectAsStateWithLifecycle()
     val credentialCount by dashboardViewModel.credentialCount.collectAsStateWithLifecycle()
 
+    // Persisted, because the Dashboard leaves the composition whenever a module
+    // is opened — remembered state would reset the layout on every trip home.
+    val userPreferences by viewModel.userPreferences.collectAsStateWithLifecycle()
+    val appsGridView = userPreferences?.isAppsGridView ?: false
+
     // Sync state with ViewModel
     LaunchedEffect(currentModuleIndex) {
         viewModel.setCurrentPage(currentModuleIndex)
@@ -245,6 +250,8 @@ fun TrackOneApp(
                             showDashboard = false
                             currentModuleIndex = modules.indexOfFirst { it.title.contains("Credential", ignoreCase = true) }.coerceAtLeast(0)
                         },
+                        isGridView = appsGridView,
+                        onToggleViewMode = viewModel::setAppsGridView,
                     )
                 } else {
                     // Back press returns to dashboard
