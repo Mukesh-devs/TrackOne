@@ -7,6 +7,7 @@ import com.dev.trackone.feature.expense.sms.domain.model.DetectionStatus
 import com.dev.trackone.feature.expense.sms.domain.model.TransactionType
 import com.dev.trackone.feature.expense.sms.domain.repository.DetectedTransactionRepository
 import com.dev.trackone.feature.expense.sms.testing.FakeDetectedTransactionDao
+import com.dev.trackone.feature.expense.sms.testing.FakeUploadScheduler
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -28,7 +29,8 @@ import org.junit.Test
 class DetectedTransactionsViewModelTest {
 
     private val dao = FakeDetectedTransactionDao()
-    private val repository = DetectedTransactionRepositoryImpl(dao)
+    private val scheduler = FakeUploadScheduler()
+    private val repository = DetectedTransactionRepositoryImpl(dao, scheduler)
 
     @Before
     fun setUp() {
@@ -69,7 +71,7 @@ class DetectedTransactionsViewModelTest {
     }
 
     @Test
-    fun acceptRemovesRowAndMarksItAccepted() = runTest {
+    fun acceptRemovesRowAndQueuesUpload() = runTest {
         val id = seed("a", occurredAt = 1_000L)
         val viewModel = DetectedTransactionsViewModel(repository)
         observe(viewModel)
@@ -79,6 +81,7 @@ class DetectedTransactionsViewModelTest {
         assertTrue(viewModel.items.value.isEmpty())
         assertEquals(0, viewModel.pendingCount.value)
         assertEquals(DetectionStatus.ACCEPTED_UNSYNCED, dao.getById(id)?.status)
+        assertEquals(listOf(id), scheduler.enqueued)
     }
 
     @Test
@@ -91,6 +94,7 @@ class DetectedTransactionsViewModelTest {
 
         assertTrue(viewModel.items.value.isEmpty())
         assertNull(dao.getById(id))
+        assertTrue(scheduler.enqueued.isEmpty())
     }
 
     @Test

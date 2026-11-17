@@ -1,6 +1,7 @@
 package com.dev.trackone.feature.expense.sms.di
 
 import com.dev.trackone.feature.expense.sms.domain.repository.DetectedTransactionRepository
+import com.dev.trackone.feature.expense.sms.upload.DetectedTransactionUploader
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
@@ -14,4 +15,6 @@ import dagger.hilt.components.SingletonComponent
 @InstallIn(SingletonComponent::class)
 interface SmsDetectionEntryPoint {
     fun detectedTransactionRepository(): DetectedTransactionRepository
+
+    fun detectedTransactionUploader(): DetectedTransactionUploader
 }

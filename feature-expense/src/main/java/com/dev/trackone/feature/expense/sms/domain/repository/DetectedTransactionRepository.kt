@@ -35,4 +35,7 @@ interface DetectedTransactionRepository {
 
     /** Deletes suggestions that have waited for review longer than the retention period. */
     suspend fun purgeStale(nowMillis: Long)
+
+    /** Re-queues accepted rows whose upload never succeeded (run on app start). */
+    suspend fun requeueUnsynced()
 }

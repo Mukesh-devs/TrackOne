@@ -7,6 +7,7 @@ import com.dev.trackone.feature.expense.sms.domain.model.DetectedTransaction
 import com.dev.trackone.feature.expense.sms.domain.model.DetectionStatus
 import com.dev.trackone.feature.expense.sms.domain.repository.DetectedTransactionRepository
 import com.dev.trackone.feature.expense.sms.parser.BankSmsParser
+import com.dev.trackone.feature.expense.sms.upload.UploadScheduler
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -18,6 +19,7 @@ import javax.inject.Singleton
 @Singleton
 class DetectedTransactionRepositoryImpl @Inject constructor(
     private val dao: DetectedTransactionDao,
+    private val uploadScheduler: UploadScheduler,
 ) : DetectedTransactionRepository {
 
     override suspend fun recordSms(
@@ -48,7 +50,8 @@ class DetectedTransactionRepositoryImpl @Inject constructor(
         dao.observePending().map { rows -> rows.map { it.toDomain() } }
 
     override suspend fun accept(id: Long) {
-        dao.accept(id)
+        // 0 rows: already accepted (double tap) or gone — nothing new to queue.
+        if (dao.accept(id) > 0) uploadScheduler.enqueue(id)
     }
 
     override suspend fun decline(id: Long) {
@@ -57,6 +60,10 @@ class DetectedTransactionRepositoryImpl @Inject constructor(
 
     override suspend fun purgeStale(nowMillis: Long) {
         dao.purgeOlderThan(nowMillis - PENDING_RETENTION_MS)
+    }
+
+    override suspend fun requeueUnsynced() {
+        dao.getAcceptedUnsyncedIds().forEach(uploadScheduler::enqueue)
     }
 
     private companion object {

@@ -15,6 +15,7 @@ import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.GET
+import retrofit2.http.Header
 import retrofit2.http.POST
 import retrofit2.http.PUT
 import retrofit2.http.Path
@@ -76,8 +77,16 @@ interface TrackOneApi {
         @Query("order") order: String = "desc",
     ): ApiEnvelope<List<ExpenseItemDto>>
 
+    /**
+     * [idempotencyKey], when given, lets the server recognise a retried create
+     * and answer with the row it already made instead of adding a duplicate.
+     * Null omits the header.
+     */
     @POST("api/v1/expense-items")
-    suspend fun createExpenseItem(@Body body: ExpenseItemRequest): ApiEnvelope<ExpenseItemDto>
+    suspend fun createExpenseItem(
+        @Body body: ExpenseItemRequest,
+        @Header("Idempotency-Key") idempotencyKey: String? = null,
+    ): ApiEnvelope<ExpenseItemDto>
 
     @PUT("api/v1/expense-items/{id}")
     suspend fun updateExpenseItem(

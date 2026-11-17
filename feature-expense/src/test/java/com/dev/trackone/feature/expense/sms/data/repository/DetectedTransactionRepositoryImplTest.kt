@@ -3,6 +3,7 @@ package com.dev.trackone.feature.expense.sms.data.repository
 import com.dev.trackone.feature.expense.sms.domain.model.DetectionStatus
 import com.dev.trackone.feature.expense.sms.domain.model.TransactionType
 import com.dev.trackone.feature.expense.sms.testing.FakeDetectedTransactionDao
+import com.dev.trackone.feature.expense.sms.testing.FakeUploadScheduler
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -14,7 +15,8 @@ import java.util.concurrent.TimeUnit
 class DetectedTransactionRepositoryImplTest {
 
     private val dao = FakeDetectedTransactionDao()
-    private val repository = DetectedTransactionRepositoryImpl(dao)
+    private val scheduler = FakeUploadScheduler()
+    private val repository = DetectedTransactionRepositoryImpl(dao, scheduler)
 
     private val sender = "VM-HDFCBK-T"
     private val body = "Rs.250.00 debited from a/c XX1234 to TEST SHOP"
@@ -60,6 +62,43 @@ class DetectedTransactionRepositoryImplTest {
         val now = TimeUnit.DAYS.toMillis(100)
         repository.purgeStale(now)
         assertEquals(now - TimeUnit.DAYS.toMillis(30), dao.lastPurgeCutoff)
+    }
+
+    @Test
+    fun acceptQueuesUploadOnce() = runBlocking {
+        repository.recordSms(sender, body, 1_000L, 5_000L)
+        val id = dao.rows.value.single().id
+
+        repository.accept(id)
+        repository.accept(id)
+
+        assertEquals(listOf(id), scheduler.enqueued)
+        assertEquals(DetectionStatus.ACCEPTED_UNSYNCED, dao.getById(id)?.status)
+    }
+
+    @Test
+    fun declineDeletesWithoutUpload() = runBlocking {
+        repository.recordSms(sender, body, 1_000L, 5_000L)
+        val id = dao.rows.value.single().id
+
+        repository.decline(id)
+
+        assertTrue(dao.rows.value.isEmpty())
+        assertTrue(scheduler.enqueued.isEmpty())
+    }
+
+    @Test
+    fun requeueCoversOnlyAcceptedRows() = runBlocking {
+        repository.recordSms(sender, body, 1_000L, 5_000L)
+        repository.recordSms(sender, body, 2_000L, 6_000L)
+        val (first, second) = dao.rows.value.map { it.id }
+        repository.accept(first)
+        scheduler.enqueued.clear()
+
+        repository.requeueUnsynced()
+
+        assertEquals(listOf(first), scheduler.enqueued)
+        assertEquals(DetectionStatus.PENDING_REVIEW, dao.getById(second)?.status)
     }
 
     @Test

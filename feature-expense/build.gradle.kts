@@ -7,6 +7,11 @@ plugins {
 
 android {
     namespace = "com.dev.trackone.feature.expense"
+
+    // JVM unit tests run classes that log; let android.util.Log stub out quietly.
+    testOptions {
+        unitTests.isReturnDefaultValues = true
+    }
 }
 
 // Export the detected-transactions database schema so future migrations have a
@@ -32,6 +37,9 @@ dependencies {
 
     // Navigation
     implementation(libs.navigation.compose)
+
+    // Uploads accepted SMS transactions once a network is available
+    implementation(libs.androidx.work.runtime.ktx)
 
     // Coroutines
     implementation(libs.coroutines.core)

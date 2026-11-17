@@ -15,7 +15,8 @@ import javax.inject.Singleton
 
 /**
  * One-off housekeeping when the user opens the app — not on a schedule, and
- * not when the process is only woken for an SMS.
+ * not when the process is only woken for an SMS: drop stale suggestions and
+ * re-queue accepted rows whose upload has not gone through yet.
  */
 @Singleton
 class SmsDetectionStartup @Inject constructor(
@@ -39,6 +40,7 @@ class SmsDetectionStartup @Inject constructor(
         scope.launch {
             try {
                 repository.purgeStale(System.currentTimeMillis())
+                repository.requeueUnsynced()
             } catch (e: Exception) {
                 Log.w(TAG, "startup maintenance failed: ${e.javaClass.simpleName}")
             }
