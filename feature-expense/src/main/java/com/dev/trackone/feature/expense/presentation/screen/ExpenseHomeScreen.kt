@@ -56,6 +56,7 @@ import com.dev.trackone.core.common.util.CurrencyUtils
 import com.dev.trackone.feature.expense.domain.model.ExpenseItem
 import com.dev.trackone.feature.expense.presentation.ExpenseUiState
 import com.dev.trackone.feature.expense.presentation.TimePeriod
+import com.dev.trackone.feature.expense.sms.presentation.detected.DetectedTransactionsBadgeButton
 import java.util.Calendar
 
 private val HeroGradient = Brush.linearGradient(listOf(Color(0xFF039BE5), Color(0xFF01579B)))
@@ -72,6 +73,8 @@ fun ExpenseHomeScreen(
     onViewAllClick: () -> Unit,
     isRefreshing: Boolean = false,
     onRefresh: () -> Unit = {},
+    pendingDetectedCount: Int = 0,
+    onDetectedTransactionsClick: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val recent = remember(uiState.items) {
@@ -94,7 +97,14 @@ fun ExpenseHomeScreen(
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(bottom = 140.dp),
         ) {
-            item { Header(selectedPeriod = uiState.selectedPeriod, onPeriodChange = onPeriodChange) }
+            item {
+                Header(
+                    selectedPeriod = uiState.selectedPeriod,
+                    onPeriodChange = onPeriodChange,
+                    pendingDetectedCount = pendingDetectedCount,
+                    onDetectedTransactionsClick = onDetectedTransactionsClick,
+                )
+            }
 
             item {
                 HeroCard(
@@ -191,6 +201,8 @@ fun ExpenseHomeScreen(
 private fun Header(
     selectedPeriod: TimePeriod,
     onPeriodChange: (TimePeriod) -> Unit,
+    pendingDetectedCount: Int,
+    onDetectedTransactionsClick: () -> Unit,
 ) {
     var menuOpen by remember { mutableStateOf(false) }
     Row(
@@ -234,6 +246,10 @@ private fun Header(
                 }
             }
         }
+        DetectedTransactionsBadgeButton(
+            count = pendingDetectedCount,
+            onClick = onDetectedTransactionsClick,
+        )
     }
 }
 

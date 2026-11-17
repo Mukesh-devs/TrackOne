@@ -67,6 +67,7 @@ import com.dev.trackone.feature.expense.presentation.screen.ExpenseDetailScreen
 import com.dev.trackone.feature.expense.presentation.screen.ExpenseHomeScreen
 import com.dev.trackone.feature.expense.presentation.screen.ExpenseStatsScreen
 import com.dev.trackone.feature.expense.presentation.screen.ExpenseTransactionsScreen
+import com.dev.trackone.feature.expense.sms.presentation.detected.DetectedTransactionsViewModel
 import com.dev.trackone.feature.expense.sms.presentation.settings.SmsDetectionSettingsCard
 
 object ExpenseRoutes {
@@ -99,9 +100,11 @@ fun ExpenseNavigation(
     modifier: Modifier = Modifier,
     navController: NavHostController = rememberNavController(),
     viewModel: ExpenseViewModel = hiltViewModel(),
+    detectedViewModel: DetectedTransactionsViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val formState by viewModel.formState.collectAsStateWithLifecycle()
+    val pendingDetectedCount by detectedViewModel.pendingCount.collectAsStateWithLifecycle()
     // Reading the observed uiState fields here keeps the label reactive to
     // period/date changes (getDateLabel() reading _uiState.value would be stale).
     val dateLabel = viewModel.dateLabelFor(uiState.selectedPeriod, uiState.currentDate)
@@ -166,6 +169,7 @@ fun ExpenseNavigation(
                             onViewAllClick = { currentTab = ExpenseRoutes.TRANSACTIONS },
                             isRefreshing = uiState.isRefreshing,
                             onRefresh = { viewModel.refresh() },
+                            pendingDetectedCount = pendingDetectedCount,
                         )
 
                         ExpenseRoutes.TRANSACTIONS -> ExpenseTransactionsScreen(

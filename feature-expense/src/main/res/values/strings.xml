@@ -12,4 +12,12 @@
     <string name="sms_permission_restricted_help">If Android says this setting is restricted: open App info, tap ⋮ at the top right, choose Allow restricted settings, then try again.</string>
     <string name="sms_open_app_settings">Open app settings</string>
 
+    <!-- Detected transactions: badge on the expense home -->
+    <string name="detected_transactions_title">Detected transactions</string>
+    <plurals name="detected_transactions_pending_description">
+        <item quantity="one">Detected transactions, %d pending</item>
+        <item quantity="other">Detected transactions, %d pending</item>
+    </plurals>
+    <string name="detected_transactions_badge_overflow">99+</string>
+
 </resources>
