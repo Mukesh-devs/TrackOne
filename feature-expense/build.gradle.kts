@@ -22,6 +22,10 @@ dependencies {
     implementation(project(":core:network"))
     implementation(project(":core:ui"))
 
+    implementation(libs.androidx.core.ktx)
+    // Permission request launcher for the SMS opt-in
+    implementation(libs.activity.compose)
+
     // Lifecycle
     implementation(libs.lifecycle.runtime.compose)
     implementation(libs.lifecycle.viewmodel.compose)

@@ -18,8 +18,10 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
@@ -57,7 +59,6 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.dev.trackone.core.ui.component.FloatingNavItem
-import com.dev.trackone.core.ui.component.TrackOneEmptyState
 import com.dev.trackone.core.ui.component.TrackOneFloatingNav
 import com.dev.trackone.feature.expense.presentation.ExpenseViewModel
 import com.dev.trackone.feature.expense.presentation.screen.ExpenseAddScreen
@@ -66,6 +67,7 @@ import com.dev.trackone.feature.expense.presentation.screen.ExpenseDetailScreen
 import com.dev.trackone.feature.expense.presentation.screen.ExpenseHomeScreen
 import com.dev.trackone.feature.expense.presentation.screen.ExpenseStatsScreen
 import com.dev.trackone.feature.expense.presentation.screen.ExpenseTransactionsScreen
+import com.dev.trackone.feature.expense.sms.presentation.settings.SmsDetectionSettingsCard
 
 object ExpenseRoutes {
     const val MAIN = "expense_main"
@@ -214,12 +216,14 @@ fun ExpenseNavigation(
                             onMessage = ::showMessage,
                         )
 
-                        ExpenseRoutes.SETTINGS -> Column(modifier = Modifier.fillMaxSize()) {
+                        ExpenseRoutes.SETTINGS -> Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .verticalScroll(rememberScrollState()),
+                        ) {
                             ScreenTitle("Settings")
-                            TrackOneEmptyState(
-                                icon = Icons.Filled.Settings,
-                                title = "Settings",
-                                subtitle = "Expense module settings coming soon",
+                            SmsDetectionSettingsCard(
+                                modifier = Modifier.padding(horizontal = 20.dp),
                             )
                         }
 

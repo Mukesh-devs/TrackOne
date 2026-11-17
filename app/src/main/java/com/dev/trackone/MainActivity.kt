@@ -11,10 +11,12 @@ import androidx.compose.runtime.setValue
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.dev.trackone.core.ui.theme.TrackOneTheme
+import com.dev.trackone.feature.expense.sms.SmsDetectionStartup
 import com.dev.trackone.ui.MainViewModel
 import com.dev.trackone.ui.TrackOneApp
 import com.dev.trackone.ui.onboarding.OnboardingScreen
 import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 
 import androidx.fragment.app.FragmentActivity
 
@@ -27,9 +29,15 @@ class MainActivity : FragmentActivity() {
 
     private val viewModel: MainViewModel by viewModels()
 
+    @Inject
+    lateinit var smsDetectionStartup: SmsDetectionStartup
+
     override fun onCreate(savedInstanceState: Bundle?) {
         val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
+
+        // Revoked-permission check and pending-row cleanup for SMS detection.
+        smsDetectionStartup.onAppStart()
         
         splashScreen.setKeepOnScreenCondition {
             viewModel.userPreferences.value == null

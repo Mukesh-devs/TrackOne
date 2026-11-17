@@ -339,6 +339,17 @@ class BankSmsParserTest {
     }
 
     @Test
+    fun headerWithoutHyphensIsRecognised() {
+        val body = "Rs.250.00 debited from a/c XX1234 to TEST SHOP"
+        assertEquals(25_000L, parse("VMHDFCBKT", body)?.amountPaise)
+        assertEquals(25_000L, parse("VMHDFCBK", body)?.amountPaise)
+        assertEquals(25_000L, parse("adbarodas", body)?.amountPaise)
+        assertNull(parse("VMHDFCBKP", body))
+        assertNull(parse("VMRANDOMT", body))
+        assertNull(parse("HDFCBK", body))
+    }
+
+    @Test
     fun failedAndDeclinedAreIgnored() {
         assertNull(parse("VM-HDFCBK-T", "Txn of Rs 500 failed / declined"))
         assertNull(parse("VM-HDFCBK-T", "Your payment of Rs 500 to TEST SHOP was declined"))

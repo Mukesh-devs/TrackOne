@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- Auto-detect bank transactions: settings -->
+    <string name="sms_detection_title">Auto-detect bank transactions</string>
+    <string name="sms_detection_summary">Spot bank debit and credit SMS on this phone and list them for you to review</string>
+    <string name="sms_disclosure_title">Read bank SMS on this phone?</string>
+    <string name="sms_disclosure_body">TrackOne reads incoming SMS only to find bank debit and credit alerts.\n\n• This happens on your phone.\n• Only the amount, the name, whether it was a credit or a debit, and the time it arrived are kept.\n• Nothing leaves your device unless you accept an item.\n• Other messages are ignored and never stored.\n\nNext, Android will ask you to allow TrackOne to receive SMS.</string>
+    <string name="sms_disclosure_continue">Continue</string>
+    <string name="sms_disclosure_not_now">Not now</string>
+    <string name="sms_permission_blocked">The SMS permission is turned off for TrackOne. Allow it in app settings, then switch this on again.</string>
+    <string name="sms_permission_restricted_help">If Android says this setting is restricted: open App info, tap ⋮ at the top right, choose Allow restricted settings, then try again.</string>
+    <string name="sms_open_app_settings">Open app settings</string>
+
+</resources>

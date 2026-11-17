@@ -47,6 +47,15 @@ object BankSenderRegistry {
      */
     private val DLT_HEADER = Regex("^[A-Z]{2}-([A-Z0-9]{3,10})(?:-([STPG]))?$")
 
+    /**
+     * The same header with the hyphens stripped ("VMHDFCBKT"), as some delivery
+     * paths — including the emulator's `sms send` — hand it over. The brand and
+     * suffix can only be told apart by looking the brand up, see [bankBrand].
+     */
+    private val DLT_HEADER_COMPACT = Regex("^[A-Z]{2}([A-Z0-9]{3,11})$")
+
+    private val SUFFIXES = setOf('S', 'T', 'P', 'G')
+
     /** Promotional and government headers never carry a bank transaction. */
     private val REJECTED_SUFFIXES = setOf("P", "G")
 
@@ -63,11 +72,19 @@ object BankSenderRegistry {
         if (normalized.isEmpty() || normalized.startsWith("+") || normalized.all { it.isDigit() }) {
             return null
         }
-        val match = DLT_HEADER.matchEntire(normalized) ?: return null
-        val suffix = match.groupValues[2]
+        val (brand, suffix) = splitHeader(normalized) ?: return null
         if (suffix in REJECTED_SUFFIXES) return null
-        val brand = match.groupValues[1]
         return brand.takeIf { it in BANKS }
+    }
+
+    /** Brand and suffix ("" when absent) of a DLT header, hyphenated or not. */
+    private fun splitHeader(header: String): Pair<String, String>? {
+        DLT_HEADER.matchEntire(header)?.let { return it.groupValues[1] to it.groupValues[2] }
+        val rest = DLT_HEADER_COMPACT.matchEntire(header)?.groupValues?.get(1) ?: return null
+        if (rest in BANKS) return rest to ""
+        val last = rest.last()
+        val brand = rest.dropLast(1)
+        return if (last in SUFFIXES && brand in BANKS) brand to last.toString() else null
     }
 
     fun isBankSender(sender: String): Boolean = bankBrand(sender) != null

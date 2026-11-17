@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!--
+      RECEIVE_SMS only. New messages arrive as a broadcast, so the app never
+      needs READ_SMS (a Play-restricted permission) and never scans the inbox.
+    -->
+    <uses-permission android:name="android.permission.RECEIVE_SMS" />
+
+    <application>
+
+        <!--
+          Starts disabled and is enabled only while the user has "Auto-detect
+          bank transactions" on and the permission is granted — when off it
+          costs nothing. BROADCAST_SMS means only the system can deliver to it,
+          so another app cannot fake an SMS event.
+        -->
+        <receiver
+            android:name=".sms.SmsReceiver"
+            android:enabled="false"
+            android:exported="true"
+            android:permission="android.permission.BROADCAST_SMS">
+            <intent-filter android:priority="0">
+                <action android:name="android.provider.Telephony.SMS_RECEIVED" />
+            </intent-filter>
+        </receiver>
+
+    </application>
+
+</manifest>
