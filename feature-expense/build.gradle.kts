@@ -38,6 +38,7 @@ dependencies {
     implementation(libs.coroutines.android)
 
     // Testing
+    testImplementation(libs.coroutines.test)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.test.runner)
 }

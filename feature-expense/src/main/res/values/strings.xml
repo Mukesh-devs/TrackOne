@@ -20,4 +20,15 @@
     </plurals>
     <string name="detected_transactions_badge_overflow">99+</string>
 
+    <!-- Detected transactions: review screen -->
+    <string name="detected_transactions_back">Back</string>
+    <string name="detected_transactions_empty_title">No new bank transactions</string>
+    <string name="detected_transactions_empty_subtitle">Bank alerts detected on this phone appear here for you to accept or decline.</string>
+    <string name="detected_transaction_credit">Credit</string>
+    <string name="detected_transaction_debit">Debit</string>
+    <string name="detected_transaction_credit_amount">+%1$s</string>
+    <string name="detected_transaction_debit_amount">−%1$s</string>
+    <string name="detected_transaction_accept">Accept %1$s</string>
+    <string name="detected_transaction_decline">Decline %1$s</string>
+
 </resources>

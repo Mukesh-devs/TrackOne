@@ -2,11 +2,14 @@ package com.dev.trackone.feature.expense.sms.data.repository
 
 import com.dev.trackone.feature.expense.sms.data.local.DetectedTransactionDao
 import com.dev.trackone.feature.expense.sms.data.local.DetectedTransactionEntity
+import com.dev.trackone.feature.expense.sms.data.mapper.toDomain
+import com.dev.trackone.feature.expense.sms.domain.model.DetectedTransaction
 import com.dev.trackone.feature.expense.sms.domain.model.DetectionStatus
 import com.dev.trackone.feature.expense.sms.domain.repository.DetectedTransactionRepository
 import com.dev.trackone.feature.expense.sms.parser.BankSmsParser
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
@@ -40,6 +43,17 @@ class DetectedTransactionRepositoryImpl @Inject constructor(
     }
 
     override fun observePendingCount(): Flow<Int> = dao.observePendingCount()
+
+    override fun observePending(): Flow<List<DetectedTransaction>> =
+        dao.observePending().map { rows -> rows.map { it.toDomain() } }
+
+    override suspend fun accept(id: Long) {
+        dao.accept(id)
+    }
+
+    override suspend fun decline(id: Long) {
+        dao.decline(id)
+    }
 
     override suspend fun purgeStale(nowMillis: Long) {
         dao.purgeOlderThan(nowMillis - PENDING_RETENTION_MS)

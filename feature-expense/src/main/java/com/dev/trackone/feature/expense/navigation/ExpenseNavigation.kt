@@ -67,6 +67,7 @@ import com.dev.trackone.feature.expense.presentation.screen.ExpenseDetailScreen
 import com.dev.trackone.feature.expense.presentation.screen.ExpenseHomeScreen
 import com.dev.trackone.feature.expense.presentation.screen.ExpenseStatsScreen
 import com.dev.trackone.feature.expense.presentation.screen.ExpenseTransactionsScreen
+import com.dev.trackone.feature.expense.sms.presentation.detected.DetectedTransactionsScreen
 import com.dev.trackone.feature.expense.sms.presentation.detected.DetectedTransactionsViewModel
 import com.dev.trackone.feature.expense.sms.presentation.settings.SmsDetectionSettingsCard
 
@@ -82,6 +83,9 @@ object ExpenseRoutes {
 
     /** Transactions behind one slice of the Stats breakdown. */
     const val BREAKDOWN = "expense_breakdown"
+
+    /** Bank SMS transactions waiting to be accepted or declined. */
+    const val DETECTED = "expense_detected"
 }
 
 private data class ExpenseTab(val label: String, val icon: ImageVector, val route: String)
@@ -170,6 +174,7 @@ fun ExpenseNavigation(
                             isRefreshing = uiState.isRefreshing,
                             onRefresh = { viewModel.refresh() },
                             pendingDetectedCount = pendingDetectedCount,
+                            onDetectedTransactionsClick = { navController.navigate(ExpenseRoutes.DETECTED) },
                         )
 
                         ExpenseRoutes.TRANSACTIONS -> ExpenseTransactionsScreen(
@@ -268,6 +273,16 @@ fun ExpenseNavigation(
                         },
                     )
                 }
+            }
+
+            composable(ExpenseRoutes.DETECTED) {
+                val detectedItems by detectedViewModel.items.collectAsStateWithLifecycle()
+                DetectedTransactionsScreen(
+                    items = detectedItems,
+                    onAccept = detectedViewModel::accept,
+                    onDecline = detectedViewModel::decline,
+                    onBack = { navController.popBackStack() },
+                )
             }
 
             composable(ExpenseRoutes.DETAIL) {
