@@ -6,6 +6,7 @@ coreKtx = "1.16.0"
 junit = "4.13.2"
 junitVersion = "1.2.1"
 espressoCore = "3.6.1"
+testRunner = "1.6.2"
 appcompat = "1.7.0"
 material = "1.12.0"
 composeBom = "2024.12.01"
@@ -91,6 +92,7 @@ material = { group = "com.google.android.material", name = "material", version.r
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
+androidx-test-runner = { group = "androidx.test", name = "runner", version.ref = "testRunner" }
 
 # Gradle plugin artifacts — used only by the build-logic convention plugins
 # so they can configure AGP/Kotlin from Kotlin code.

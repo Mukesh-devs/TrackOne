@@ -9,6 +9,12 @@ android {
     namespace = "com.dev.trackone.feature.expense"
 }
 
+// Export the detected-transactions database schema so future migrations have a
+// baseline to diff against (exportSchema = true on DetectedTransactionsDatabase).
+ksp {
+    arg("room.schemaLocation", "$projectDir/schemas")
+}
+
 dependencies {
     implementation(project(":core:common"))
     implementation(project(":core:database"))
@@ -26,4 +32,8 @@ dependencies {
     // Coroutines
     implementation(libs.coroutines.core)
     implementation(libs.coroutines.android)
+
+    // Testing
+    androidTestImplementation(libs.androidx.junit)
+    androidTestImplementation(libs.androidx.test.runner)
 }
