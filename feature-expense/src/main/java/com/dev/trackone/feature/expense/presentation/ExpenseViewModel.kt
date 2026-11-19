@@ -134,12 +134,14 @@ class ExpenseViewModel @Inject constructor(
         // Re-centres on today and pulls straight from the API, bypassing the
         // background-refresh throttle. [observePeriodData] picks the new rows up
         // from Room, so there is nothing to re-subscribe here.
-        _uiState.update { it.copy(currentDate = System.currentTimeMillis()) }
+        _uiState.update { it.copy(isRefreshing = true, currentDate = System.currentTimeMillis()) }
         viewModelScope.launch {
             try {
                 repository.refreshFromCloud()
             } catch (e: Exception) {
                 _uiState.update { it.copy(actionMessage = e.message ?: "Could not refresh") }
+            } finally {
+                _uiState.update { it.copy(isRefreshing = false) }
             }
         }
     }
