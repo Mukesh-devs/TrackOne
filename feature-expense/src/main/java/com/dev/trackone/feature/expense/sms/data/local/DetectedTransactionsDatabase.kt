@@ -10,9 +10,9 @@ import androidx.room.TypeConverters
  * Deliberately separate from the app's main `AppDatabase`:
  * - backup rules work per file, so only a separate file can be kept out of
  *   cloud backup and device transfer (see `res/xml/data_extraction_rules.xml`);
- * - it holds nothing but pending suggestions, so it can be encrypted on its own
- *   and simply recreated if its key is ever lost, without touching the expense
- *   cache in the main database.
+ * - it holds nothing but pending suggestions, so it is encrypted on its own
+ *   (SQLCipher, see `EncryptedOpenHelperFactory`) and simply recreated if its
+ *   key is ever lost, without touching the expense cache in the main database.
  *
  * Schemas are exported to feature-expense/schemas/. Any schema change needs a
  * real Migration — there is no destructive fallback.

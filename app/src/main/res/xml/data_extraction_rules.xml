@@ -2,9 +2,10 @@
    Backup rules for Android 12+ (API 31+).
    See https://developer.android.com/about/versions/12/backup-restore#xml-changes
 
-   Transactions detected in bank SMS never leave the device: their database is
-   excluded from both cloud backup and device-to-device transfer. Everything
-   else keeps the platform defaults.
+   Transactions detected in bank SMS never leave the device: their database,
+   and the prefs file holding its wrapped key, are excluded from both cloud
+   backup and device-to-device transfer. Everything else keeps the platform
+   defaults.
 -->
 <data-extraction-rules>
     <cloud-backup>
@@ -12,11 +13,13 @@
         <exclude domain="database" path="detected_transactions.db-journal" />
         <exclude domain="database" path="detected_transactions.db-shm" />
         <exclude domain="database" path="detected_transactions.db-wal" />
+        <exclude domain="sharedpref" path="detected_transactions_key.xml" />
     </cloud-backup>
     <device-transfer>
         <exclude domain="database" path="detected_transactions.db" />
         <exclude domain="database" path="detected_transactions.db-journal" />
         <exclude domain="database" path="detected_transactions.db-shm" />
         <exclude domain="database" path="detected_transactions.db-wal" />
+        <exclude domain="sharedpref" path="detected_transactions_key.xml" />
     </device-transfer>
 </data-extraction-rules>

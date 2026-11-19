@@ -40,6 +40,8 @@ dependencies {
 
     // Uploads accepted SMS transactions once a network is available
     implementation(libs.androidx.work.runtime.ktx)
+    // Encrypts the detected-transactions database
+    implementation(libs.sqlcipher.android)
 
     // Coroutines
     implementation(libs.coroutines.core)

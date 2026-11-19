@@ -4,6 +4,8 @@ import android.content.Context
 import androidx.room.Room
 import com.dev.trackone.feature.expense.sms.data.local.DetectedTransactionDao
 import com.dev.trackone.feature.expense.sms.data.local.DetectedTransactionsDatabase
+import com.dev.trackone.feature.expense.sms.data.local.security.DatabaseKeyStore
+import com.dev.trackone.feature.expense.sms.data.local.security.EncryptedOpenHelperFactory
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -19,11 +21,15 @@ object SmsDetectionModule {
     @Singleton
     fun provideDetectedTransactionsDatabase(
         @ApplicationContext context: Context,
+        keyStore: DatabaseKeyStore,
     ): DetectedTransactionsDatabase = Room.databaseBuilder(
         context,
         DetectedTransactionsDatabase::class.java,
         DetectedTransactionsDatabase.NAME,
-    ).build()
+    )
+        // Encrypted at rest with SQLCipher; see EncryptedOpenHelperFactory.
+        .openHelperFactory(EncryptedOpenHelperFactory(context, keyStore))
+        .build()
 
     @Provides
     fun provideDetectedTransactionDao(database: DetectedTransactionsDatabase): DetectedTransactionDao =
