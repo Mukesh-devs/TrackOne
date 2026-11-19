@@ -11,8 +11,8 @@ android {
     defaultConfig {
         applicationId = "com.dev.trackone"
         targetSdk = 36
-        versionCode = 5
-        versionName = "5.1"
+        versionCode = 6
+        versionName = "6.0"
     }
 
     applicationVariants.all {
