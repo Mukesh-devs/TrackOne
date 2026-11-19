@@ -6,8 +6,8 @@ package com.dev.trackone.core.common.config
 object AppConfig {
     const val APP_NAME = "TrackOne"
     const val APP_PACKAGE = "com.dev.trackone"
-    const val VERSION_NAME = "1.0.0"
-    const val VERSION_CODE = 1
+    const val VERSION_NAME = "6.0"
+    const val VERSION_CODE = 6
 
     // Module identifiers
     const val MODULE_EXPIRY = "expiry"
