@@ -76,4 +76,11 @@ class MainViewModel @Inject constructor(
             userPreferencesRepository.completeTour()
         }
     }
+
+    /** Home screen's Apps section: grid of tiles, or rows. */
+    fun setAppsGridView(enabled: Boolean) {
+        viewModelScope.launch {
+            userPreferencesRepository.setAppsGridView(enabled)
+        }
+    }
 }

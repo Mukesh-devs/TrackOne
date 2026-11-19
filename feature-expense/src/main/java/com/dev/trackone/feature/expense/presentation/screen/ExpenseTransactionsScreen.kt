@@ -57,6 +57,7 @@ fun ExpenseTransactionsScreen(
     dateLabel: String,
     onPeriodChange: (TimePeriod) -> Unit,
     onNavigateDate: (Boolean) -> Unit,
+    onPickDate: (Long) -> Unit,
     onItemClick: (ExpenseItem) -> Unit,
     onBack: () -> Unit,
     isRefreshing: Boolean = false,
@@ -172,8 +173,11 @@ fun ExpenseTransactionsScreen(
                         
                         SharedDateNavigationRow(
                             dateLabel = dateLabel,
+                            period = uiState.selectedPeriod,
+                            currentDate = uiState.currentDate,
                             onPrevious = { onNavigateDate(false) },
                             onNext = { onNavigateDate(true) },
+                            onPickDate = onPickDate,
                             modifier = Modifier.padding(horizontal = Dimens.SpacingLg).padding(bottom = 8.dp)
                         )
                     }

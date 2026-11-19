@@ -1,0 +1,18 @@
+#!/bin/sh
+# Rejects commit messages that mention the tooling used to write them or carry
+# co-author / "generated with" trailers. Enable once per clone with:
+#   git config core.hooksPath .githooks
+
+msg_file="$1"
+
+# Check only what ends up in the commit: drop comment lines and anything below
+# the scissors line that `git commit -v` appends (it contains the diff).
+body=$(sed -e '/^# -\{24\} >8 -\{24\}$/,$d' -e '/^#/d' "$msg_file")
+
+if printf '%s\n' "$body" | grep -Eiq 'claude|anthropic|co-authored-by|generated with'; then
+    echo "commit-msg: rejected. The message must not mention Claude, Anthropic," >&2
+    echo "co-author trailers or 'generated with' lines (see the git rules)." >&2
+    exit 1
+fi
+
+exit 0

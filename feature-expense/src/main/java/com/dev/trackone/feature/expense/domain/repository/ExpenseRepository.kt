@@ -24,7 +24,11 @@ interface ExpenseRepository {
     
     fun getTotalExpense(startTime: Long, endTime: Long): Flow<Double>
 
-    suspend fun insert(item: ExpenseItem): Long
+    /**
+     * Creates [item] on the server. Pass an [idempotencyKey] for a create that
+     * may be retried, so a retry after a lost response cannot add it twice.
+     */
+    suspend fun insert(item: ExpenseItem, idempotencyKey: String? = null): Long
 
     suspend fun update(item: ExpenseItem)
 

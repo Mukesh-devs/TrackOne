@@ -110,9 +110,13 @@ class ExpenseViewModel @Inject constructor(
         _uiState.update { it.copy(selectedPeriod = period, currentDate = System.currentTimeMillis()) }
     }
 
-    /** Jump the current view to a specific month (used by the Home month dropdown). */
-    fun selectMonth(monthMillis: Long) {
-        _uiState.update { it.copy(selectedPeriod = TimePeriod.MONTH, currentDate = monthMillis) }
+    /**
+     * Jump straight to a date, keeping the selected period. The picker already
+     * works in whatever granularity the period uses, so switching it here would
+     * only undo the user's choice.
+     */
+    fun jumpToDate(dateMillis: Long) {
+        _uiState.update { it.copy(currentDate = dateMillis) }
     }
 
     fun navigateDate(forward: Boolean) {
@@ -178,6 +182,19 @@ class ExpenseViewModel @Inject constructor(
     // ========== Filtering ==========
     fun setCategoryFilter(category: ExpenseCategory?) {
         _uiState.update { it.copy(selectedCategory = category) }
+    }
+
+    /**
+     * Drill into one slice of the statistics breakdown. Held here rather than
+     * in the route so the selection survives a rotation the same way
+     * [selectItem] does.
+     */
+    fun selectSpendingFilter(filter: SpendingFilter) {
+        _uiState.update { it.copy(spendingFilter = filter) }
+    }
+
+    fun clearSpendingFilter() {
+        _uiState.update { it.copy(spendingFilter = null) }
     }
 
     // ========== CRUD ==========
