@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material3.Icon
@@ -15,6 +16,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -103,14 +108,22 @@ fun SharedTimePeriodToggle(
 
 /**
  * Left/Right arrow date navigator showing the current date label.
+ *
+ * The arrows step one period at a time; tapping the label in the middle opens
+ * a picker instead, because stepping to a date a year back is a dozen taps.
  */
 @Composable
 fun SharedDateNavigationRow(
     dateLabel: String,
+    period: TimePeriod,
+    currentDate: Long,
     onPrevious: () -> Unit,
     onNext: () -> Unit,
+    onPickDate: (Long) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    var showPicker by remember { mutableStateOf(false) }
+
     Row(
         modifier = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -123,12 +136,32 @@ fun SharedDateNavigationRow(
                 tint = MaterialTheme.colorScheme.onSurface,
             )
         }
-        Text(
-            text = dateLabel,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.onSurface,
-        )
+
+        Surface(
+            onClick = { showPicker = true },
+            shape = RoundedCornerShape(20.dp),
+            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+        ) {
+            Row(
+                modifier = Modifier.padding(start = 14.dp, end = 10.dp, top = 8.dp, bottom = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = dateLabel,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Icon(
+                    imageVector = Icons.Default.ArrowDropDown,
+                    contentDescription = "Jump to a date",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(20.dp),
+                )
+            }
+        }
+
         IconButton(onClick = onNext) {
             Icon(
                 imageVector = Icons.Default.ChevronRight,
@@ -136,6 +169,15 @@ fun SharedDateNavigationRow(
                 tint = MaterialTheme.colorScheme.onSurface,
             )
         }
+    }
+
+    if (showPicker) {
+        PeriodPickerDialog(
+            period = period,
+            currentDate = currentDate,
+            onPick = onPickDate,
+            onDismiss = { showPicker = false },
+        )
     }
 }
 

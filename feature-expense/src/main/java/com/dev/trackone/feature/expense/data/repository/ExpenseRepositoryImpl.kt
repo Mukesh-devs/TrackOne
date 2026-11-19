@@ -71,8 +71,8 @@ class ExpenseRepositoryImpl @Inject constructor(
     override fun getTotalExpense(startTime: Long, endTime: Long): Flow<Double> =
         dao.getTotalExpense(startTime, endTime).map { it ?: 0.0 }.cached()
 
-    override suspend fun insert(item: ExpenseItem): Long {
-        val created = apiCall { api.createExpenseItem(item.toRequest()) }
+    override suspend fun insert(item: ExpenseItem, idempotencyKey: String?): Long {
+        val created = apiCall { api.createExpenseItem(item.toRequest(), idempotencyKey) }
         dao.insert(created.toEntity())
         refreshCoordinator.invalidate(CACHE_KEY)
         return created.id

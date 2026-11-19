@@ -18,8 +18,10 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
@@ -57,14 +59,17 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.dev.trackone.core.ui.component.FloatingNavItem
-import com.dev.trackone.core.ui.component.TrackOneEmptyState
 import com.dev.trackone.core.ui.component.TrackOneFloatingNav
 import com.dev.trackone.feature.expense.presentation.ExpenseViewModel
 import com.dev.trackone.feature.expense.presentation.screen.ExpenseAddScreen
+import com.dev.trackone.feature.expense.presentation.screen.ExpenseBreakdownDetailScreen
 import com.dev.trackone.feature.expense.presentation.screen.ExpenseDetailScreen
 import com.dev.trackone.feature.expense.presentation.screen.ExpenseHomeScreen
 import com.dev.trackone.feature.expense.presentation.screen.ExpenseStatsScreen
 import com.dev.trackone.feature.expense.presentation.screen.ExpenseTransactionsScreen
+import com.dev.trackone.feature.expense.sms.presentation.detected.DetectedTransactionsScreen
+import com.dev.trackone.feature.expense.sms.presentation.detected.DetectedTransactionsViewModel
+import com.dev.trackone.feature.expense.sms.presentation.settings.SmsDetectionSettingsCard
 
 object ExpenseRoutes {
     const val MAIN = "expense_main"
@@ -75,6 +80,12 @@ object ExpenseRoutes {
     const val SETTINGS = "expense_settings"
     const val DETAIL = "expense_detail"
     const val EDIT = "expense_edit"
+
+    /** Transactions behind one slice of the Stats breakdown. */
+    const val BREAKDOWN = "expense_breakdown"
+
+    /** Bank SMS transactions waiting to be accepted or declined. */
+    const val DETECTED = "expense_detected"
 }
 
 private data class ExpenseTab(val label: String, val icon: ImageVector, val route: String)
@@ -93,9 +104,11 @@ fun ExpenseNavigation(
     modifier: Modifier = Modifier,
     navController: NavHostController = rememberNavController(),
     viewModel: ExpenseViewModel = hiltViewModel(),
+    detectedViewModel: DetectedTransactionsViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val formState by viewModel.formState.collectAsStateWithLifecycle()
+    val pendingDetectedCount by detectedViewModel.pendingCount.collectAsStateWithLifecycle()
     // Reading the observed uiState fields here keeps the label reactive to
     // period/date changes (getDateLabel() reading _uiState.value would be stale).
     val dateLabel = viewModel.dateLabelFor(uiState.selectedPeriod, uiState.currentDate)
@@ -152,7 +165,7 @@ fun ExpenseNavigation(
                             dateLabel = dateLabel,
                             onPeriodChange = viewModel::setTimePeriod,
                             onNavigateDate = viewModel::navigateDate,
-                            onSelectMonth = viewModel::selectMonth,
+                            onPickDate = viewModel::jumpToDate,
                             onItemClick = { item ->
                                 viewModel.selectItem(item)
                                 navController.navigate(ExpenseRoutes.DETAIL)
@@ -160,6 +173,8 @@ fun ExpenseNavigation(
                             onViewAllClick = { currentTab = ExpenseRoutes.TRANSACTIONS },
                             isRefreshing = uiState.isRefreshing,
                             onRefresh = { viewModel.refresh() },
+                            pendingDetectedCount = pendingDetectedCount,
+                            onDetectedTransactionsClick = { navController.navigate(ExpenseRoutes.DETECTED) },
                         )
 
                         ExpenseRoutes.TRANSACTIONS -> ExpenseTransactionsScreen(
@@ -167,6 +182,7 @@ fun ExpenseNavigation(
                             dateLabel = dateLabel,
                             onPeriodChange = { viewModel.setTimePeriod(it) },
                             onNavigateDate = { viewModel.navigateDate(it) },
+                            onPickDate = viewModel::jumpToDate,
                             onItemClick = { item ->
                                 viewModel.selectItem(item)
                                 navController.navigate(ExpenseRoutes.DETAIL)
@@ -200,16 +216,23 @@ fun ExpenseNavigation(
                             dateLabel = dateLabel,
                             onPeriodChange = viewModel::setTimePeriod,
                             onNavigateDate = viewModel::navigateDate,
+                            onPickDate = viewModel::jumpToDate,
                             getCsvData = viewModel::generateCsvForCurrentPeriod,
+                            onSliceClick = { filter ->
+                                viewModel.selectSpendingFilter(filter)
+                                navController.navigate(ExpenseRoutes.BREAKDOWN)
+                            },
                             onMessage = ::showMessage,
                         )
 
-                        ExpenseRoutes.SETTINGS -> Column(modifier = Modifier.fillMaxSize()) {
+                        ExpenseRoutes.SETTINGS -> Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .verticalScroll(rememberScrollState()),
+                        ) {
                             ScreenTitle("Settings")
-                            TrackOneEmptyState(
-                                icon = Icons.Filled.Settings,
-                                title = "Settings",
-                                subtitle = "Expense module settings coming soon",
+                            SmsDetectionSettingsCard(
+                                modifier = Modifier.padding(horizontal = 20.dp),
                             )
                         }
 
@@ -230,6 +253,36 @@ fun ExpenseNavigation(
                         modifier = Modifier.align(Alignment.BottomCenter),
                     )
                 }
+            }
+
+            composable(ExpenseRoutes.BREAKDOWN) {
+                uiState.spendingFilter?.let { filter ->
+                    ExpenseBreakdownDetailScreen(
+                        filter = filter,
+                        // Already narrowed to the period the chart was showing.
+                        items = uiState.expenseItems,
+                        periodLabel = dateLabel,
+                        periodTotal = uiState.totalExpense,
+                        onItemClick = { item ->
+                            viewModel.selectItem(item)
+                            navController.navigate(ExpenseRoutes.DETAIL)
+                        },
+                        onBack = {
+                            viewModel.clearSpendingFilter()
+                            navController.popBackStack()
+                        },
+                    )
+                }
+            }
+
+            composable(ExpenseRoutes.DETECTED) {
+                val detectedItems by detectedViewModel.items.collectAsStateWithLifecycle()
+                DetectedTransactionsScreen(
+                    items = detectedItems,
+                    onAccept = detectedViewModel::accept,
+                    onDecline = detectedViewModel::decline,
+                    onBack = { navController.popBackStack() },
+                )
             }
 
             composable(ExpenseRoutes.DETAIL) {
